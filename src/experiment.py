@@ -93,7 +93,8 @@ def run_trial(
     model_path,
     device,
     seed_base,
-    max_steps,
+    train_max_steps,
+    eval_max_steps,
 ):
     start = time.time()
     numeric_seed = seed_base + sum(ord(ch) for ch in config.trial_id)
@@ -105,9 +106,9 @@ def run_trial(
         obs_mul_factor=config.obs_mul_factor,
         seed=numeric_seed,
         progress_interval=0,
-        max_steps_per_episode=max_steps,
+        max_steps_per_episode=train_max_steps,
     )
-    summary = evaluate(ai, config.obs_mul_factor, eval_seeds, device, max_steps)
+    summary = evaluate(ai, config.obs_mul_factor, eval_seeds, device, eval_max_steps)
 
     if model_path:
         ai.save_q(str(model_path))
@@ -168,7 +169,8 @@ def run_phase(
     seed_base,
     workers,
     executor_name,
-    max_steps,
+    train_max_steps,
+    eval_max_steps,
 ):
     rows = []
     executor_cls = ThreadPoolExecutor if executor_name == "thread" else ProcessPoolExecutor
@@ -188,7 +190,8 @@ def run_phase(
                     model_path,
                     device,
                     seed_base,
-                    max_steps,
+                    train_max_steps,
+                    eval_max_steps,
                 )
             )
 
@@ -217,7 +220,8 @@ def main():
     parser.add_argument("--seed-base", type=int, default=2026)
     parser.add_argument("--results-dir", default=str(PROJECT_ROOT / "results"))
     parser.add_argument("--best-model-path", default=str(PROJECT_ROOT / "q_best.pkl"))
-    parser.add_argument("--max-steps", type=int, default=5000)
+    parser.add_argument("--train-max-steps", type=int, default=1000)
+    parser.add_argument("--eval-max-steps", type=int, default=5000)
     args = parser.parse_args()
 
     results_dir = Path(args.results_dir)
@@ -244,7 +248,8 @@ def main():
         args.seed_base,
         args.workers,
         args.executor,
-        args.max_steps,
+        args.train_max_steps,
+        args.eval_max_steps,
     )
     top_configs = select_top_configs(screen_rows, configs, args.top_k, device)
     retrain_rows = run_phase(
@@ -257,7 +262,8 @@ def main():
         args.seed_base + 10000,
         args.workers,
         args.executor,
-        args.max_steps,
+        args.train_max_steps,
+        args.eval_max_steps,
     )
 
     all_rows = screen_rows + retrain_rows
@@ -275,7 +281,8 @@ def main():
         "retrain_episodes": args.retrain_episodes,
         "workers": args.workers,
         "executor": args.executor,
-        "max_steps": args.max_steps,
+        "train_max_steps": args.train_max_steps,
+        "eval_max_steps": args.eval_max_steps,
         "worker_stats_device": str(worker_device),
         "selection_device": str(device),
         "cuda_device": torch.cuda.get_device_name(0) if torch.cuda.is_available() else "",

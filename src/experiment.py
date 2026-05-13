@@ -1,4 +1,4 @@
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor, as_completed
 from dataclasses import asdict, dataclass
 from pathlib import Path
 import argparse
@@ -146,9 +146,20 @@ def select_top_configs(results, configs, top_k, device):
     return [config_map[results[index]["trial_id"]] for index in order[:top_k]]
 
 
-def run_phase(configs, phase, iterations, eval_seeds, models_dir, device, seed_base, workers):
+def run_phase(
+    configs,
+    phase,
+    iterations,
+    eval_seeds,
+    models_dir,
+    device,
+    seed_base,
+    workers,
+    executor_name,
+):
     rows = []
-    with ThreadPoolExecutor(max_workers=workers) as executor:
+    executor_cls = ThreadPoolExecutor if executor_name == "thread" else ProcessPoolExecutor
+    with executor_cls(max_workers=workers) as executor:
         futures = []
         for config in configs:
             model_path = None
@@ -172,7 +183,8 @@ def run_phase(configs, phase, iterations, eval_seeds, models_dir, device, seed_b
             rows.append(row)
             print(
                 f"[{phase}] {row['trial_id']} mean={row['mean_score']:.2f} "
-                f"max={row['max_score']} time={row['training_seconds']}s"
+                f"max={row['max_score']} time={row['training_seconds']}s",
+                flush=True,
             )
 
     rows.sort(key=lambda row: row["mean_score"], reverse=True)
@@ -187,6 +199,7 @@ def main():
     parser.add_argument("--retrain-episodes", type=int, default=50)
     parser.add_argument("--top-k", type=int, default=3)
     parser.add_argument("--workers", type=int, default=min(6, os.cpu_count() or 1))
+    parser.add_argument("--executor", choices=["thread", "process"], default="thread")
     parser.add_argument("--seed-base", type=int, default=2026)
     parser.add_argument("--results-dir", default=str(PROJECT_ROOT / "results"))
     parser.add_argument("--best-model-path", default=str(PROJECT_ROOT / "q_best.pkl"))
@@ -201,16 +214,21 @@ def main():
     screen_seeds = [args.seed_base + i for i in range(args.screen_episodes)]
     retrain_seeds = [args.seed_base + 1000 + i for i in range(args.retrain_episodes)]
 
-    print(f"Using {args.workers} worker thread(s), stats device={device}")
+    print(
+        f"Using {args.workers} {args.executor} worker(s), stats device={device}",
+        flush=True,
+    )
+    worker_device = torch.device("cpu") if args.executor == "process" else device
     screen_rows = run_phase(
         configs,
         "screen",
         args.screen_iterations,
         screen_seeds,
         models_dir,
-        device,
+        worker_device,
         args.seed_base,
         args.workers,
+        args.executor,
     )
     top_configs = select_top_configs(screen_rows, configs, args.top_k, device)
     retrain_rows = run_phase(
@@ -219,9 +237,10 @@ def main():
         args.retrain_iterations,
         retrain_seeds,
         models_dir,
-        device,
+        worker_device,
         args.seed_base + 10000,
         args.workers,
+        args.executor,
     )
 
     all_rows = screen_rows + retrain_rows
@@ -238,13 +257,15 @@ def main():
         "screen_episodes": args.screen_episodes,
         "retrain_episodes": args.retrain_episodes,
         "workers": args.workers,
-        "stats_device": str(device),
+        "executor": args.executor,
+        "worker_stats_device": str(worker_device),
+        "selection_device": str(device),
         "cuda_device": torch.cuda.get_device_name(0) if torch.cuda.is_available() else "",
     }
     with (results_dir / "best_summary.json").open("w", encoding="utf-8") as file:
         json.dump(best_summary, file, ensure_ascii=False, indent=2)
 
-    print(f"Best model copied to {best_model_path}: {best['trial_id']}")
+    print(f"Best model copied to {best_model_path}: {best['trial_id']}", flush=True)
 
 
 if __name__ == "__main__":

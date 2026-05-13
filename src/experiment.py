@@ -60,19 +60,21 @@ def score_summary(scores, device):
     }
 
 
-def evaluate(ai, obs_mul_factor, seeds, device):
+def evaluate(ai, obs_mul_factor, seeds, device, max_steps):
     env = gymnasium.make("FlappyBird-v0", render_mode=None, use_lidar=False)
     scores = []
     try:
         for seed in seeds:
             obs, _ = env.reset(seed=seed)
+            steps = 0
             while True:
                 action = ai.choose_action(
                     process_obs(obs, obs_mul_factor),
                     use_epsilon=False,
                 )
                 obs, _, done, _, info = env.step(action)
-                if done:
+                steps += 1
+                if done or steps >= max_steps:
                     scores.append(int(info["score"]))
                     break
     finally:
@@ -83,7 +85,16 @@ def evaluate(ai, obs_mul_factor, seeds, device):
     return summary
 
 
-def run_trial(config, phase, iterations, eval_seeds, model_path, device, seed_base):
+def run_trial(
+    config,
+    phase,
+    iterations,
+    eval_seeds,
+    model_path,
+    device,
+    seed_base,
+    max_steps,
+):
     start = time.time()
     numeric_seed = seed_base + sum(ord(ch) for ch in config.trial_id)
     ai = train(
@@ -94,8 +105,9 @@ def run_trial(config, phase, iterations, eval_seeds, model_path, device, seed_ba
         obs_mul_factor=config.obs_mul_factor,
         seed=numeric_seed,
         progress_interval=0,
+        max_steps_per_episode=max_steps,
     )
-    summary = evaluate(ai, config.obs_mul_factor, eval_seeds, device)
+    summary = evaluate(ai, config.obs_mul_factor, eval_seeds, device, max_steps)
 
     if model_path:
         ai.save_q(str(model_path))
@@ -156,6 +168,7 @@ def run_phase(
     seed_base,
     workers,
     executor_name,
+    max_steps,
 ):
     rows = []
     executor_cls = ThreadPoolExecutor if executor_name == "thread" else ProcessPoolExecutor
@@ -175,6 +188,7 @@ def run_phase(
                     model_path,
                     device,
                     seed_base,
+                    max_steps,
                 )
             )
 
@@ -203,6 +217,7 @@ def main():
     parser.add_argument("--seed-base", type=int, default=2026)
     parser.add_argument("--results-dir", default=str(PROJECT_ROOT / "results"))
     parser.add_argument("--best-model-path", default=str(PROJECT_ROOT / "q_best.pkl"))
+    parser.add_argument("--max-steps", type=int, default=5000)
     args = parser.parse_args()
 
     results_dir = Path(args.results_dir)
@@ -229,6 +244,7 @@ def main():
         args.seed_base,
         args.workers,
         args.executor,
+        args.max_steps,
     )
     top_configs = select_top_configs(screen_rows, configs, args.top_k, device)
     retrain_rows = run_phase(
@@ -241,6 +257,7 @@ def main():
         args.seed_base + 10000,
         args.workers,
         args.executor,
+        args.max_steps,
     )
 
     all_rows = screen_rows + retrain_rows
@@ -258,6 +275,7 @@ def main():
         "retrain_episodes": args.retrain_episodes,
         "workers": args.workers,
         "executor": args.executor,
+        "max_steps": args.max_steps,
         "worker_stats_device": str(worker_device),
         "selection_device": str(device),
         "cuda_device": torch.cuda.get_device_name(0) if torch.cuda.is_available() else "",

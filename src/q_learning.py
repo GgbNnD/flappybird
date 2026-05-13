@@ -192,6 +192,7 @@ def train(
     seed=42,
     death_penalty=-1000,
     progress_interval=1000,
+    max_steps_per_episode=None,
 ):
     """
     通过让AI进行n次游戏来进行强化学习。
@@ -213,6 +214,7 @@ def train(
         if progress_interval and (i+1) % progress_interval == 0:
             print(f"Playing training game {i+1}")
         obs, _ = env.reset()
+        steps = 0
         while True:
             # Next action:
             # (feed the observation to your agent here)
@@ -221,6 +223,7 @@ def train(
 
             # Processing:
             next_obs, reward, terminated, _, info = env.step(action)
+            steps += 1
             if reward == -1:
                 reward = death_penalty
 
@@ -229,6 +232,8 @@ def train(
 
             # Checking if the player is still alive
             if terminated:
+                break
+            if max_steps_per_episode and steps >= max_steps_per_episode:
                 break
 
             obs = next_obs

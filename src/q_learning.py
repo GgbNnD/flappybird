@@ -6,7 +6,7 @@ import pickle
 
 class GameAI():
 
-    def __init__(self, alpha=0.5, gamma=1, epsilon=0.1):
+    def __init__(self, alpha=0.5, gamma=1, epsilon=0.1, rng=None):
         """
         初始化：
         一个字典self.q表示Q-Function，存储从（状态，行动）对到Q-Value的映射，
@@ -20,6 +20,7 @@ class GameAI():
         self.alpha = alpha
         self.gamma = gamma
         self.epsilon = epsilon
+        self.rng = rng or random
 
     def save_q(self, path:str):
         """
@@ -109,15 +110,15 @@ class GameAI():
         """
 
         actions = sorted(self.available_actions(state))
-        if use_epsilon and random.random() < self.epsilon:
-            return random.choice(actions)
+        if use_epsilon and self.rng.random() < self.epsilon:
+            return self.rng.choice(actions)
 
         best_value = max(self.get_q_value(state, action) for action in actions)
         best_actions = [
             action for action in actions
             if self.get_q_value(state, action) == best_value
         ]
-        return random.choice(best_actions)
+        return self.rng.choice(best_actions)
 
     @classmethod
     def available_actions(cls, state:List[int]) -> Set[int]:
@@ -201,7 +202,8 @@ def train(
     * gamma: 折扣因子
     * epsilon: 行动时的探索概率
     """
-    player = GameAI(alpha=alpha, gamma=gamma, epsilon=epsilon)
+    rng = random.Random(seed)
+    player = GameAI(alpha=alpha, gamma=gamma, epsilon=epsilon, rng=rng)
 
     env = gymnasium.make("FlappyBird-v0", render_mode=None, use_lidar=False)
     # 使用seed可以确保每次训练时游戏的随机性都是一致的
@@ -274,4 +276,3 @@ def play(
     print(f'The average score(s) of Q-Function: {sum(scores) / len(scores)}')
     assert obs.shape == env.observation_space.shape
     return scores
-

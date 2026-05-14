@@ -4,7 +4,7 @@
 
 本项目使用表格型 Q-learning 为 Flappy Bird 训练智能体。代码补全位于 `src/q_learning.py`，训练实验入口位于 `src/experiment.py`，最佳模型保存为 `q_best.pkl`。
 
-本次没有修改环境原始奖励结构，只保留代码框架中的死亡惩罚放大：环境死亡奖励 `-1` 在训练时改为 `-1000`，用于强化“避免死亡”的学习信号。
+基础实验保留代码框架中的死亡惩罚放大：环境死亡奖励 `-1` 在训练时改为 `-1000`，用于强化“避免死亡”的学习信号。bonus2 额外实现了奖励塑形方案，并在 `results_bonus/` 中单独保存对比结果。
 
 ## 2. Q-learning 实现
 
@@ -16,7 +16,15 @@ Q(s, a) <- Q(s, a) + alpha * (reward + gamma * max_a' Q(s', a') - Q(s, a))
 
 动作空间为 `{0, 1}`，其中 `0` 表示不扇动，`1` 表示 flap。训练时使用 epsilon-greedy 策略，在探索概率 `epsilon` 下随机动作，否则选择当前 Q 值最大的动作；测试时关闭探索，只使用当前最优动作。
 
-状态表示由 `process_obs` 完成。根据最近未通过的管道，提取并离散化四个特征：
+状态表示由 `process_obs` 完成。代码中提供三种状态表示，便于完成 bonus1 的对比：
+
+| state_mode | 状态特征 | 说明 |
+| --- | --- | --- |
+| `example` | 水平距离、到下管道距离、垂直速度 | 作业说明中的示例思路 |
+| `enhanced` | 水平距离、到缺口中心距离、到下管道距离、垂直速度 | 基础实验和最终最佳模型使用 |
+| `bonus` | 水平距离、到缺口中心距离、到上管道距离、到下管道距离、垂直速度、旋转角 | bonus1 的扩展状态 |
+
+基础最佳模型使用 `enhanced`。根据最近未通过的管道，提取并离散化四个特征：
 
 | 状态特征 | 含义 |
 | --- | --- |
@@ -26,6 +34,8 @@ Q(s, a) <- Q(s, a) + alpha * (reward + gamma * max_a' Q(s', a') - Q(s, a))
 | `player_v` | 小鸟垂直速度 |
 
 这些连续观测值乘以 `obs_mul_factor` 后取整，用作 Q 表 key。实验中比较了 `obs_mul_factor=24/30/36`，最佳模型使用 `30`。
+
+bonus2 的 `shaped` 奖励在死亡惩罚基础上增加三个信号：小鸟越接近管道缺口中心奖励越高，垂直速度越大惩罚越大，flap 动作附加极小惩罚，触顶时给予较大惩罚。这样做的目的是在“是否过管/死亡”之外，给智能体更密集的飞行姿态反馈。
 
 ## 3. 参数实验与加速方式
 
@@ -55,6 +65,27 @@ Q(s, a) <- Q(s, a) + alpha * (reward + gamma * max_a' Q(s', a') - Q(s, a))
 
 最佳模型为 `baseline`，已保存为 `q_best.pkl`。完整结果见 `results/experiment_results.csv` 和 `results/best_summary.json`。
 
+bonus1/bonus2 对比实验单独保存在 `results_bonus/`，初筛 8 组，复训初筛前三。初筛结果如下：
+
+| trial | state_mode | reward_mode | 初筛均分 | 最高分 |
+| --- | --- | --- | ---: | ---: |
+| enhanced_reward_base | enhanced | death_penalty | 120.20 | 132 |
+| enhanced_shaped_e000 | enhanced | shaped | 119.95 | 132 |
+| bonus_reward_base | bonus | death_penalty | 115.90 | 132 |
+| bonus_shaped_e000 | bonus | shaped | 111.40 | 132 |
+| enhanced_shaped_e005 | enhanced | shaped | 91.70 | 132 |
+| example_reward_base | example | death_penalty | 63.70 | 132 |
+
+复训结果如下：
+
+| trial | state_mode | reward_mode | 复训均分 | 最低分 | 最高分 | 标准差 |
+| --- | --- | --- | ---: | ---: | ---: | ---: |
+| enhanced_reward_base | enhanced | death_penalty | 78.86 | 2 | 132 | 51.54 |
+| enhanced_shaped_e000 | enhanced | shaped | 73.84 | 1 | 132 | 48.10 |
+| bonus_reward_base | bonus | death_penalty | 53.84 | 1 | 132 | 45.47 |
+
+bonus 实验中，扩展状态和奖励塑形在初筛阶段明显优于示例状态；其中 `enhanced_shaped_e000` 说明奖励塑形能在较少训练局数下提供更密集的学习信号。但在 100000 局复训和固定 50 局评估中，bonus 模型没有超过原有 `q_best.pkl` 的 `90.52` 平均分，因此最终提交的最佳模型仍保留为原 `q_best.pkl`。bonus 阶段最佳模型另存为 `q_bonus_best.pkl`。
+
 ## 5. 参数影响分析
 
 `epsilon=0` 的 baseline 表现最好，说明在当前离散状态表示和固定随机种子训练下，较稳定的贪心更新可以快速积累有效 Q 值。加入 `epsilon=0.05` 后，部分参数仍能达到较高分，但均分略低；`epsilon=0.10` 的多数结果明显下降，说明探索过多会在 Flappy Bird 这种死亡惩罚很大的环境中带来较多负样本。
@@ -63,6 +94,10 @@ Q(s, a) <- Q(s, a) + alpha * (reward + gamma * max_a' Q(s', a') - Q(s, a))
 
 `obs_mul_factor=30` 的状态粒度最合适。`24` 会让状态过粗，丢失管道与小鸟位置差异；`36` 会让状态空间更稀疏，同样训练局数下 Q 表覆盖不足，因此整体分数偏低。
 
+bonus1 对比中，`example` 初筛均分为 `63.70`，而加入缺口中心信息的 `enhanced` 初筛均分达到 `120.20`，说明“相对缺口中心的位置”比单纯依赖下管道距离更能表达当前飞行目标。`bonus` 状态加入上管道距离和旋转角后初筛也达到 `115.90`，但复训均分较低，推测是状态维度变高后 Q 表更稀疏，100000 局训练仍不足以稳定覆盖。
+
+bonus2 对比中，`enhanced_shaped_e000` 初筛均分达到 `119.95`，接近原奖励下的 `120.20`，说明奖励塑形没有破坏学习方向，并能提供姿态反馈。但复训均分为 `73.84`，低于原奖励的 `78.86`，说明当前塑形系数偏保守且可能引入了与最终过管目标不完全一致的局部偏好。最终保留原奖励最佳模型，奖励塑形方案作为 bonus2 实现和分析结果提交。
+
 ## 6. 结论
 
-本项目完成了 Q-learning 代码补全、PDF 转 Markdown、参数搜索、最佳模型保存和实验报告。最佳 Q 表模型在 50 局评估中的平均分为 `90.52`，最高分为 `132`，相比作业说明中的默认示例平均分 `32.2` 有明显提升。
+本项目完成了 Q-learning 代码补全、PDF 转 Markdown、参数搜索、最佳模型保存、bonus1 状态设计、bonus2 奖励塑形和实验报告。最终提交的最佳 Q 表模型在 50 局评估中的平均分为 `90.52`，最高分为 `132`，相比作业说明中的默认示例平均分 `32.2` 有明显提升。bonus 对比结果表明：更合理的状态表示能显著改善初筛表现，奖励塑形可提供额外学习信号，但当前复训最佳仍是原 `enhanced + death_penalty` 方案。

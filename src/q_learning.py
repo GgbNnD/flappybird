@@ -140,7 +140,16 @@ class GameAI():
         actions.add(1) # 1 means flap
         return actions
 
-def process_obs(obs, obs_mul_factor=30) -> List[int]:
+def _nearest_pipe(obs):
+    player_x = 0.2
+    pipe_width = 52 / 288
+
+    # 如果第一个管道已经完全位于小鸟身后，就转而使用下一个管道。
+    pipe_start = 3 if obs[0] + pipe_width < player_x else 0
+    return pipe_start, player_x
+
+
+def process_obs(obs, obs_mul_factor=30, state_mode="enhanced") -> List[int]:
     """
     通过obs_mul_factor，将游戏环境返回的各种观测值obs转换成合适的状态值。
 
@@ -163,25 +172,62 @@ def process_obs(obs, obs_mul_factor=30) -> List[int]:
     Return:
     * 根据状态设计，将当前的观测值转换成对应的状态state
     """
-    player_x = 0.2
-    pipe_width = 52 / 288
-
-    # 如果第一个管道已经完全位于小鸟身后，就转而使用下一个管道。
-    pipe_start = 3 if obs[0] + pipe_width < player_x else 0
+    pipe_start, player_x = _nearest_pipe(obs)
     pipe_x = obs[pipe_start]
     pipe_top = obs[pipe_start + 1]
     pipe_bottom = obs[pipe_start + 2]
     player_y = obs[9]
     player_v = obs[10]
+    player_rot = obs[11]
 
     gap_center = (pipe_top + pipe_bottom) / 2
-    state = [
-        pipe_x - player_x,
-        player_y - gap_center,
-        pipe_bottom - player_y,
-        player_v,
-    ]
+    if state_mode == "example":
+        state = [
+            pipe_x - player_x,
+            pipe_bottom - player_y,
+            player_v,
+        ]
+    elif state_mode == "enhanced":
+        state = [
+            pipe_x - player_x,
+            player_y - gap_center,
+            pipe_bottom - player_y,
+            player_v,
+        ]
+    elif state_mode == "bonus":
+        state = [
+            pipe_x - player_x,
+            player_y - gap_center,
+            player_y - pipe_top,
+            pipe_bottom - player_y,
+            player_v,
+            player_rot,
+        ]
+    else:
+        raise ValueError(f"Unknown state_mode: {state_mode}")
     return [int(value * obs_mul_factor) for value in state]
+
+
+def shape_reward(obs, reward, terminated, action, reward_mode="death_penalty", death_penalty=-1000):
+    if reward == -1:
+        return death_penalty
+    if reward_mode == "death_penalty":
+        return reward
+    if reward_mode != "shaped":
+        raise ValueError(f"Unknown reward_mode: {reward_mode}")
+
+    pipe_start, _ = _nearest_pipe(obs)
+    pipe_top = obs[pipe_start + 1]
+    pipe_bottom = obs[pipe_start + 2]
+    player_y = obs[9]
+    player_v = obs[10]
+    gap_center = (pipe_top + pipe_bottom) / 2
+
+    center_bonus = max(0, 1 - abs(player_y - gap_center) * 4) * 0.2
+    velocity_penalty = abs(player_v) * 0.02
+    flap_penalty = 0.01 if action == 1 else 0
+    top_penalty = 100 if reward == -0.5 or player_y <= 0 else 0
+    return reward + center_bonus - velocity_penalty - flap_penalty - top_penalty
 
 def train(
     iteration,
@@ -193,6 +239,8 @@ def train(
     death_penalty=-1000,
     progress_interval=1000,
     max_steps_per_episode=None,
+    state_mode="enhanced",
+    reward_mode="death_penalty",
 ):
     """
     通过让AI进行n次游戏来进行强化学习。
@@ -218,17 +266,23 @@ def train(
         while True:
             # Next action:
             # (feed the observation to your agent here)
-            state = process_obs(obs, obs_mul_factor)
+            state = process_obs(obs, obs_mul_factor, state_mode)
             action = player.choose_action(state)
 
             # Processing:
             next_obs, reward, terminated, _, info = env.step(action)
             steps += 1
-            if reward == -1:
-                reward = death_penalty
+            reward = shape_reward(
+                next_obs,
+                reward,
+                terminated,
+                action,
+                reward_mode=reward_mode,
+                death_penalty=death_penalty,
+            )
 
             # update the agent
-            player.update(state, action, process_obs(next_obs, obs_mul_factor), reward)
+            player.update(state, action, process_obs(next_obs, obs_mul_factor, state_mode), reward)
 
             # Checking if the player is still alive
             if terminated:
@@ -252,6 +306,7 @@ def play(
     episodes=5,
     obs_mul_factor=30,
     seed=42,
+    state_mode="enhanced",
 ):
     env = gymnasium.make("FlappyBird-v0", audio_on=audio_on, render_mode=render_mode, use_lidar=use_lidar)
     scores = []
@@ -263,7 +318,7 @@ def play(
         obs, _ = env.reset()
         while True:
 
-            action = ai.choose_action(process_obs(obs, obs_mul_factor), use_epsilon=False)
+            action = ai.choose_action(process_obs(obs, obs_mul_factor, state_mode), use_epsilon=False)
 
             # Processing:
             obs, _, done , _, info = env.step(action)

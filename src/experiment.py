@@ -25,6 +25,8 @@ class TrialConfig:
     gamma: float
     epsilon: float
     obs_mul_factor: int
+    state_mode: str = "enhanced"
+    reward_mode: str = "death_penalty"
 
 
 def parameter_grid():
@@ -50,6 +52,19 @@ def parameter_grid():
     ]
 
 
+def bonus_grid():
+    return [
+        TrialConfig("example_reward_base", 0.7, 0.95, 0.0, 30, "example", "death_penalty"),
+        TrialConfig("enhanced_reward_base", 0.7, 0.95, 0.0, 30, "enhanced", "death_penalty"),
+        TrialConfig("bonus_reward_base", 0.7, 0.95, 0.0, 30, "bonus", "death_penalty"),
+        TrialConfig("enhanced_shaped_e000", 0.7, 0.95, 0.0, 30, "enhanced", "shaped"),
+        TrialConfig("enhanced_shaped_e005", 0.7, 0.95, 0.05, 30, "enhanced", "shaped"),
+        TrialConfig("enhanced_shaped_g090", 0.5, 0.90, 0.05, 30, "enhanced", "shaped"),
+        TrialConfig("bonus_shaped_e000", 0.7, 0.95, 0.0, 30, "bonus", "shaped"),
+        TrialConfig("bonus_shaped_e005", 0.7, 0.95, 0.05, 30, "bonus", "shaped"),
+    ]
+
+
 def score_summary(scores, device):
     values = torch.tensor(scores, dtype=torch.float32, device=device)
     return {
@@ -60,7 +75,7 @@ def score_summary(scores, device):
     }
 
 
-def evaluate(ai, obs_mul_factor, seeds, device, max_steps):
+def evaluate(ai, obs_mul_factor, state_mode, seeds, device, max_steps):
     env = gymnasium.make("FlappyBird-v0", render_mode=None, use_lidar=False)
     scores = []
     try:
@@ -69,7 +84,7 @@ def evaluate(ai, obs_mul_factor, seeds, device, max_steps):
             steps = 0
             while True:
                 action = ai.choose_action(
-                    process_obs(obs, obs_mul_factor),
+                    process_obs(obs, obs_mul_factor, state_mode),
                     use_epsilon=False,
                 )
                 obs, _, done, _, info = env.step(action)
@@ -107,8 +122,17 @@ def run_trial(
         seed=numeric_seed,
         progress_interval=0,
         max_steps_per_episode=train_max_steps,
+        state_mode=config.state_mode,
+        reward_mode=config.reward_mode,
     )
-    summary = evaluate(ai, config.obs_mul_factor, eval_seeds, device, eval_max_steps)
+    summary = evaluate(
+        ai,
+        config.obs_mul_factor,
+        config.state_mode,
+        eval_seeds,
+        device,
+        eval_max_steps,
+    )
 
     if model_path:
         ai.save_q(str(model_path))
@@ -135,6 +159,8 @@ def write_csv(path, rows):
         "gamma",
         "epsilon",
         "obs_mul_factor",
+        "state_mode",
+        "reward_mode",
         "iterations",
         "eval_episodes",
         "mean_score",
@@ -217,6 +243,7 @@ def main():
     parser.add_argument("--top-k", type=int, default=3)
     parser.add_argument("--workers", type=int, default=min(6, os.cpu_count() or 1))
     parser.add_argument("--executor", choices=["thread", "process"], default="thread")
+    parser.add_argument("--grid", choices=["full", "bonus"], default="full")
     parser.add_argument("--seed-base", type=int, default=2026)
     parser.add_argument("--results-dir", default=str(PROJECT_ROOT / "results"))
     parser.add_argument("--best-model-path", default=str(PROJECT_ROOT / "q_best.pkl"))
@@ -229,7 +256,7 @@ def main():
     models_dir.mkdir(parents=True, exist_ok=True)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    configs = parameter_grid()
+    configs = bonus_grid() if args.grid == "bonus" else parameter_grid()
     screen_seeds = [args.seed_base + i for i in range(args.screen_episodes)]
     retrain_seeds = [args.seed_base + 1000 + i for i in range(args.retrain_episodes)]
 
@@ -281,6 +308,7 @@ def main():
         "retrain_episodes": args.retrain_episodes,
         "workers": args.workers,
         "executor": args.executor,
+        "grid": args.grid,
         "train_max_steps": args.train_max_steps,
         "eval_max_steps": args.eval_max_steps,
         "worker_stats_device": str(worker_device),

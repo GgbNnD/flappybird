@@ -27,8 +27,8 @@ def configure_fonts():
 def save_bar(df, title, xlabel, ylabel, output, color="#3f7cac", limit=None):
     if limit:
         df = df.head(limit)
-    fig_height = max(4.5, 0.35 * len(df) + 1.5)
-    fig, ax = plt.subplots(figsize=(10, fig_height))
+    fig_height = max(4.8, 0.5 * len(df) + 1.5)
+    fig, ax = plt.subplots(figsize=(12, fig_height))
     ax.barh(df[xlabel], df[ylabel], color=color)
     ax.invert_yaxis()
     ax.set_title(title)
@@ -42,6 +42,31 @@ def save_bar(df, title, xlabel, ylabel, output, color="#3f7cac", limit=None):
     plt.close(fig)
 
 
+def base_label(row):
+    prefix = "基线" if row["trial_id"] == "baseline" else "实验"
+    return (
+        f"{prefix}: α={row['alpha']:.1f}, γ={row['gamma']:.2f}, "
+        f"ε={row['epsilon']:.2f}, 粒度={int(row['obs_mul_factor'])}"
+    )
+
+
+def bonus_label(row):
+    state_names = {
+        "example": "示例状态",
+        "enhanced": "增强状态",
+        "bonus": "扩展状态",
+    }
+    reward_names = {
+        "death_penalty": "死亡惩罚",
+        "shaped": "奖励塑形",
+    }
+    return (
+        f"{state_names.get(row['state_mode'], row['state_mode'])} + "
+        f"{reward_names.get(row['reward_mode'], row['reward_mode'])}: "
+        f"α={row['alpha']:.1f}, γ={row['gamma']:.2f}, ε={row['epsilon']:.2f}"
+    )
+
+
 def main():
     configure_fonts()
     ASSETS_DIR.mkdir(parents=True, exist_ok=True)
@@ -53,11 +78,15 @@ def main():
     retrain = base[base["phase"] == "retrain"].sort_values("mean_score", ascending=False)
     bonus_screen = bonus[bonus["phase"] == "screen"].sort_values("mean_score", ascending=False)
     bonus_retrain = bonus[bonus["phase"] == "retrain"].sort_values("mean_score", ascending=False)
+    screen = screen.assign(display_label=screen.apply(base_label, axis=1))
+    retrain = retrain.assign(display_label=retrain.apply(base_label, axis=1))
+    bonus_screen = bonus_screen.assign(display_label=bonus_screen.apply(bonus_label, axis=1))
+    bonus_retrain = bonus_retrain.assign(display_label=bonus_retrain.apply(bonus_label, axis=1))
 
     save_bar(
         screen,
         "基础参数初筛平均分 Top 12",
-        "trial_id",
+        "display_label",
         "mean_score",
         ASSETS_DIR / "base_screen_top12.png",
         color="#31708e",
@@ -66,7 +95,7 @@ def main():
     save_bar(
         retrain,
         "基础参数复训平均分",
-        "trial_id",
+        "display_label",
         "mean_score",
         ASSETS_DIR / "base_retrain.png",
         color="#4f8a5b",
@@ -74,7 +103,7 @@ def main():
     save_bar(
         bonus_screen,
         "Bonus 状态与奖励初筛平均分",
-        "trial_id",
+        "display_label",
         "mean_score",
         ASSETS_DIR / "bonus_screen.png",
         color="#b65f37",
@@ -82,7 +111,7 @@ def main():
     save_bar(
         bonus_retrain,
         "Bonus 复训平均分",
-        "trial_id",
+        "display_label",
         "mean_score",
         ASSETS_DIR / "bonus_retrain.png",
         color="#7c5aa6",

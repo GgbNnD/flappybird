@@ -29,7 +29,7 @@ else:
 	"""
 	请将'q_timestamp.pkl'替换成你自己的Q-Function的保存路径
 	"""
-	path = 'q_timestamp.pkl'
+	path = 'q_best.pkl'
 	ai.load_q(path)
 	play(ai)
 

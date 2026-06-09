@@ -134,10 +134,13 @@ def main():
 
     phase_compare = pd.DataFrame(
         [
-            {"name": "示例状态 example", "score": 63.70},
-            {"name": "增强状态 enhanced", "score": 120.20},
-            {"name": "扩展状态 bonus", "score": 115.90},
-            {"name": "增强状态 + shaped reward", "score": 119.95},
+            {"name": "示例状态 example\n(初筛, 30k 局)", "score": 63.70},
+            {"name": "扩展状态 bonus (6维)\n(复训, 100k 局)", "score": 67.74},
+            {"name": "增强状态 enhanced (4维)\n(复训, 100k 局)", "score": 165.18},
+            {"name": "增强状态 + shaped 奖励\n(复训, 100k 局)", "score": 109.04},
+            {"name": "增强状态 + shaped_v2 奖励\n(bonus2, 100k 局)", "score": 311.16},
+            {"name": "enhanced_top (5维)\n(bonus1, 100k 局)", "score": 275.40},
+            {"name": "enhanced_top + shaped_v2\n(组合最佳, 100k 局)", "score": 571.50},
         ]
     )
     save_bar(

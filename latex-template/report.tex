@@ -387,28 +387,29 @@ def train(iteration, alpha, gamma, epsilon, obs_mul_factor=30,
 	\centering
 	\caption{四种状态表示方法对比}
 	\label{tab:state_modes}
-	\begin{tabular}{cclp{4cm}}
+	\small
+	\begin{tabularx}{\textwidth}{cclX}
 		\toprule
-		\texttt{state\_mode} & 维度 & 特征向量 & 设计思路 \\
+		\texttt{state\_mode} & 维 & 特征向量 & 设计思路 \\
 		\midrule
-		\texttt{example} & 3 维 &
+		\texttt{example} & 3 &
 		$\begin{bmatrix}
 			pipe\_x - player\_x \\
 			pipe\_bottom - player\_y \\
 			player\_v
 		\end{bmatrix}$ &
-		作业示例方法。关注水平距离、到下管道的垂直距离和小鸟速度，是最基本的状态表示。\\
+		作业示例。关注水平距离、下管道距离和小鸟速度。\\
 		\midrule
-		\texttt{enhanced} & 4 维 &
+		\texttt{enhanced} & 4 &
 		$\begin{bmatrix}
 			pipe\_x - player\_x \\
 			player\_y - gap\_center \\
 			pipe\_bottom - player\_y \\
 			player\_v
 		\end{bmatrix}$ &
-		基础最佳方案。相比示例方法新增"小鸟与管道缺口中心的垂直差"。这直接表达了"飞向缺口中心"的目标。\\
+		基础最佳。新增缺口中心垂直差，直接表达"飞向中心"目标。100k 均分 165.18。\\
 		\midrule
-		\texttt{enhanced\_top} & 5 维 &
+		\texttt{enhanced\_top} & 5 &
 		$\begin{bmatrix}
 			pipe\_x - player\_x \\
 			player\_y - gap\_center \\
@@ -416,9 +417,9 @@ def train(iteration, alpha, gamma, epsilon, obs_mul_factor=30,
 			player\_v \\
 			player\_y - pipe\_top
 		\end{bmatrix}$ &
-		\textbf{bonus1 最终方案}。在 enhanced 基础上新增"到上管道距离"。仅增加 1 维，Q 表规模可控（$\sim$21k），但提供了间隙大小和上边界信息，使小鸟能在狭窄间隙中更精准地控制高度。100k 局训练后均分 $275.40$，超越 enhanced 的 $165.18$。\\
+		\textbf{bonus1 方案}。新增上管道距离，提供间隙大小和上边界信息。仅 +1 维，Q 表 $\sim$21k。100k 均分 $\mathbf{275.40}$（+67\%）。\\
 		\midrule
-		\texttt{bonus} & 6 维 &
+		\texttt{bonus} & 6 &
 		$\begin{bmatrix}
 			pipe\_x - player\_x \\
 			player\_y - gap\_center \\
@@ -427,9 +428,9 @@ def train(iteration, alpha, gamma, epsilon, obs_mul_factor=30,
 			player\_v \\
 			player\_rot
 		\end{bmatrix}$ &
-		在增强状态基础上加入"到上管道距离"和"旋转角"。但 6 维导致 Q 表极度稀疏（$\sim$26k），且旋转角噪声大、信息增益低，复训后仅 $67.74$。\\
+		含上管道距离和旋转角。6 维导致 Q 表稀疏（$\sim$26k），旋转角噪声大、信息增益低。100k 仅 67.74。\\
 		\bottomrule
-	\end{tabular}
+	\end{tabularx}
 \end{table}
 
 

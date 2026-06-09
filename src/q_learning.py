@@ -194,6 +194,14 @@ def process_obs(obs, obs_mul_factor=30, state_mode="enhanced") -> List[int]:
             pipe_bottom - player_y,
             player_v,
         ]
+    elif state_mode == "enhanced_top":
+        state = [
+            pipe_x - player_x,
+            player_y - gap_center,
+            pipe_bottom - player_y,
+            player_v,
+            player_y - pipe_top,
+        ]
     elif state_mode == "bonus":
         state = [
             pipe_x - player_x,
@@ -202,6 +210,18 @@ def process_obs(obs, obs_mul_factor=30, state_mode="enhanced") -> List[int]:
             pipe_bottom - player_y,
             player_v,
             player_rot,
+        ]
+    elif state_mode == "lookahead":
+        next_pipe_start = pipe_start + 3
+        next_pipe_top = obs[next_pipe_start + 1]
+        next_pipe_bottom = obs[next_pipe_start + 2]
+        next_gap_center = (next_pipe_top + next_pipe_bottom) / 2
+        state = [
+            pipe_x - player_x,
+            player_y - gap_center,
+            pipe_bottom - player_y,
+            player_v,
+            next_gap_center - player_y,
         ]
     else:
         raise ValueError(f"Unknown state_mode: {state_mode}")
@@ -213,7 +233,7 @@ def shape_reward(obs, reward, terminated, action, reward_mode="death_penalty", d
         return death_penalty
     if reward_mode == "death_penalty":
         return reward
-    if reward_mode != "shaped":
+    if reward_mode not in ("shaped", "shaped_v2"):
         raise ValueError(f"Unknown reward_mode: {reward_mode}")
 
     pipe_start, _ = _nearest_pipe(obs)
@@ -223,11 +243,16 @@ def shape_reward(obs, reward, terminated, action, reward_mode="death_penalty", d
     player_v = obs[10]
     gap_center = (pipe_top + pipe_bottom) / 2
 
-    center_bonus = max(0, 1 - abs(player_y - gap_center) * 4) * 0.2
-    velocity_penalty = abs(player_v) * 0.02
-    flap_penalty = 0.01 if action == 1 else 0
-    top_penalty = 100 if reward == -0.5 or player_y <= 0 else 0
-    return reward + center_bonus - velocity_penalty - flap_penalty - top_penalty
+    if reward_mode == "shaped":
+        center_bonus = max(0, 1 - abs(player_y - gap_center) * 4) * 0.2
+        velocity_penalty = abs(player_v) * 0.02
+        flap_penalty = 0.01 if action == 1 else 0
+        top_penalty = 100 if reward == -0.5 or player_y <= 0 else 0
+        return reward + center_bonus - velocity_penalty - flap_penalty - top_penalty
+
+    center_bonus = max(0, 1 - abs(player_y - gap_center) * 4) * 1.0
+    top_penalty = 50 if (reward == -0.5 or player_y <= 0) else 0
+    return reward + center_bonus - top_penalty
 
 def train(
     iteration,

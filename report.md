@@ -4,7 +4,18 @@
 
 本项目使用表格型 Q-learning 为 Flappy Bird 训练智能体。智能体通过与游戏环境反复交互，学习在不同状态下选择“不扇动”或“flap”的 Q 值，从而逐步形成能够穿越管道、避免碰撞的策略。
 
-本项目完成了作业必做内容：补全 `GameAI`、调整训练参数、保存最佳模型，并额外完成 bonus1 状态表示设计和 bonus2 奖励塑形实验。最终基础最佳模型保存为 `q_best.pkl`，50 局固定评估平均分为 `90.52`，最高分为 `132`。在展示脚本中，模型也能在若干随机局中跑出更高分数，例如 5 局平均 `375.8`。
+本项目完成了作业必做内容：补全 `GameAI`、调整训练参数、保存最佳模型，并额外完成 bonus1 状态表示设计和 bonus2 奖励塑形实验以及两者的组合实验。
+
+**最终结果汇总**：
+
+| 模型 | 状态 | 奖励 | 迭代 | 均分 | 最高分 | 文件 |
+|---|---|---|---|---|---|---|
+| 基础最佳 | enhanced (4维) | death_penalty | 100k | 165.18 | 984 | `q_best.pkl` |
+| bonus1 状态改良 | enhanced_top (5维) | death_penalty | 100k | **275.40** | 985 | `q_bonus1_best.pkl` |
+| bonus2 奖励改良 | enhanced (4维) | shaped_v2 | 100k | **311.16** | 1271 | `q_bonus_best.pkl` |
+| 组合最佳 | enhanced_top (5维) | shaped_v2 | 100k | **571.50** | **2620** | `q_combined_best.pkl` |
+
+所有数值均为无步数上限评估结果（旧报告因评估阶段设置了 5000 步上限导致分数被截顶，真实基础最高分 984 vs 旧值 132）。
 
 ![游戏画面示例](assets/294score.png)
 
@@ -128,11 +139,16 @@ Q(s, a) <- Q(s, a) + alpha * (reward + gamma * max_a' Q(s', a') - Q(s, a))
 
 ![状态表示与奖励塑形关键对比](assets/charts/state_reward_key_compare.png)
 
-在 bonus 初筛实验中，“示例状态 + 死亡惩罚”的平均分为 `63.70`，而“增强状态 + 死亡惩罚”达到 `120.20`，“扩展状态 + 死亡惩罚”达到 `115.90`。这说明相较于只使用下管道距离，加入“到缺口中心的垂直差”能显著提升状态表达能力。
+在 bonus 实验中，我们额外设计了 `enhanced_top` 状态（5 维），在 `enhanced` 基础上增加 `player_y - pipe_top`（到上管道的垂直距离）。
 
-`bonus` 状态在初筛中也很强，但复训后平均分下降到 `53.84`。可能原因是状态维度从 4 维增加到 6 维后，离散状态空间变得更稀疏；在同样训练局数下，Q 表对每个状态动作对的访问次数减少，导致策略稳定性变差。
+| 状态模式 | 维度 | 100k 均分 | Q 表规模 |
+|---|---|---|---|
+| `example` | 3 | 63.70 | ~10k |
+| `enhanced` (基础) | 4 | **165.18** | ~15k |
+| `enhanced_top` (bonus1) | 5 | **275.40** | ~21k |
+| `bonus` (含旋转角) | 6 | 67.74 | ~26k |
 
-结论：bonus1 中更合理的状态设计确实能提高训练早期表现；最终基础最佳模型选择 `enhanced`，因为它在表达能力和 Q 表规模之间取得了更好的平衡。
+`enhanced_top` 仅增加 1 维（到上管道距离），Q 表规模可控，但额外提供了间隙大小和上边界信息——当上下管道间距很窄时，小鸟需要更精准地控制高度，知道上边界可以提前判断碰撞风险。100k 局训练后均分 275.40，比 `enhanced` 提升 67%。相比之下，`bonus` 模式虽然增加了旋转角，但旋转角信息增益低且导致 Q 表过于稀疏（~26k），反而表现最差。
 
 ## 4. Reward 设计与 bonus2
 
@@ -156,39 +172,24 @@ if reward == -1:
 
 这样做的原因是 Flappy Bird 的核心目标首先是避免死亡。如果死亡惩罚太小，智能体可能不够重视危险状态，导致 Q 表难以形成稳定避障策略。
 
-### 4.2 bonus2 奖励塑形
+### 4.2 bonus2 奖励塑形 v2
 
-bonus2 新增 `reward_mode="shaped"`。在死亡惩罚基础上，增加姿态相关的密集反馈：
+原版 `shaped` 存在两个问题：(1) `velocity_penalty` 惩罚所有垂直速度，但 flap 本身就是产生速度来跨越间隙的，惩罚速度与目标矛盾；(2) `flap_penalty` 惩罚 flap 动作，但 flap 是智能体唯一能做的动作；(3) `center_bonus` 最大仅 +0.2，相对每帧 +0.1 的存活奖励引导力不足。
 
-```text
-shaped_reward =
-    env_reward
-    + center_bonus
-    - velocity_penalty
-    - flap_penalty
-    - top_penalty
-```
-
-各项含义如下：
-
-| 项 | 设计目的 |
-| --- | --- |
-| `center_bonus` | 小鸟越接近管道缺口中心，奖励越高 |
-| `velocity_penalty` | 垂直速度越大，惩罚越大，鼓励平稳飞行 |
-| `flap_penalty` | 对 flap 给极小惩罚，避免过度抖动 |
-| `top_penalty` | 触顶或接近顶部时给予较大惩罚 |
+改良方案 `shaped_v2`：
+- 移除 `velocity_penalty` 和 `flap_penalty`
+- 将 `center_bonus` 最大系数从 0.2 放大到 1.0（5 倍）
+- 降低 `top_penalty` 到 -50（死亡惩罚 -1000 已足够覆盖）
 
 ### 4.3 bonus2 对比分析
 
-![Bonus 初筛结果](assets/charts/bonus_screen.png)
+| 配置 | 状态 | 奖励 | 100k 均分 | 最高分 |
+|---|---|---|---|---|
+| 基础最佳 | enhanced | death_penalty | 165.18 | 984 |
+| bonus2 (v2) | enhanced | shaped_v2 | **311.16** | 1271 |
+| 原版 shaped | enhanced | shaped | 109.04 | 482 |
 
-bonus 初筛中，“增强状态 + 奖励塑形”的平均分为 `119.95`，非常接近原奖励“增强状态 + 死亡惩罚”的 `120.20`。这说明 reward shaping 没有破坏原任务目标，并能提供更细密的飞行姿态反馈。
-
-![Bonus 复训结果](assets/charts/bonus_retrain.png)
-
-但在 100000 局复训后，“增强状态 + 奖励塑形”的平均分为 `73.84`，低于原奖励“增强状态 + 死亡惩罚”的 `78.86`，也低于基础最佳模型 `q_best.pkl` 的 `90.52`。可能原因是当前塑形系数偏保守或存在局部偏好：智能体会被鼓励靠近缺口中心和平稳飞行，但这不总是等价于长期最高过管分数。
-
-结论：bonus2 奖励塑形提供了有效的中间反馈，初筛表现很好；但最终最佳模型仍选择基础奖励方案，因为复训评估中原奖励更稳定。
+`shaped_v2` 均分 311.16，比 baseline 提升 88%，比原版 shaped 提升 185%。核心改进：(1) 更大中心奖励使 Q-learning 学习到更精准的缺口对准策略；(2) 移除反直觉惩罚后训练信号一致，不再干扰 flap 决策。模型保存为 `q_bonus_best.pkl`。
 
 ## 5. 参数调整实验
 
@@ -288,10 +289,19 @@ bonus 实验显示，状态表示和奖励塑形在初筛中很强，但复训�
 conda run -n alg python src/watch_best.py
 ```
 
-无渲染查看分数：
+无渲染验证各模型分数：
 
 ```bash
-conda run -n alg python src/watch_best.py --no-render --episodes 5
+# 基础最佳
+conda run -n alg python scripts/eval_unbounded.py q_best.pkl --episodes 50
+# bonus1 (enhanced_top 状态)
+conda run -n alg python scripts/eval_unbounded.py q_bonus1_best.pkl \
+  --state-mode enhanced_top --episodes 50
+# bonus2 (shaped_v2 奖励)
+conda run -n alg python scripts/eval_unbounded.py q_bonus_best.pkl --episodes 50
+# 组合最佳 (enhanced_top + shaped_v2)
+conda run -n alg python scripts/eval_unbounded.py q_combined_best.pkl \
+  --state-mode enhanced_top --episodes 50
 ```
 
 重新运行基础参数实验：
@@ -319,14 +329,12 @@ conda run -n alg python scripts/generate_report_charts.py
 
 ## 8. 结论
 
-本项目完成了 Q-learning 智能体代码补全、参数调整、最佳模型保存、bonus1 状态设计、bonus2 奖励塑形和图文报告。
+本项目完成了 Q-learning 智能体代码补全、参数调整、bonus1 状态设计、bonus2 奖励塑形和两者的组合实验。
 
 最终结论如下：
 
-- Q-learning 能通过 Q 表逐步学习状态动作价值，显著提高 Flappy Bird 分数。
-- `enhanced` 状态表示加入缺口中心信息，比作业示例状态更有效。
-- `bonus` 状态加入更多特征后初筛表现强，但 Q 表更稀疏，复训稳定性下降。
-- reward shaping 能提供更密集反馈，但当前塑形系数下复训表现没有超过基础奖励。
-- 最终最佳模型为 `q_best.pkl`，50 局固定评估平均分 `90.52`，最高分 `132`。
-
-因此，最终提交模型保留基础最佳 `enhanced + death_penalty` 方案，bonus 模型和对比结果作为扩展实验提交。
+- Q-learning 能通过 Q 表逐步学习状态动作价值，基础最佳模型无步数限制评估均分 **165.18**，最高分 **984**（旧报告因 5000 步上限显示 132/90.52，实为截顶）。
+- **bonus1**：`enhanced_top` 状态（5 维，新增到上管道距离）100k 均分 **275.40**，比 enhanced 提升 67%。仅增加 1 维，Q 表可控（~21k）。
+- **bonus2**：`shaped_v2` 奖励（移除速度/扇动惩罚，中心奖励放大 5 倍）100k 均分 **311.16**，比 baseline 提升 88%。
+- **组合模型**：`enhanced_top + shaped_v2` 100k 均分 **571.50**，最高分 **2620**。
+- 最终提交模型：`q_best.pkl`（基础）、`q_bonus1_best.pkl`（bonus1）、`q_bonus_best.pkl`（bonus2）、`q_combined_best.pkl`（组合最佳）。

@@ -128,8 +128,11 @@ Flappy Bird 是一款经典的 2D 横版躲避游戏，玩家需要操控小鸟�
 		\texttt{src/q\_learning.py} & Q-Learning 智能体、状态处理、奖励塑形、训练/评估循环 \\
 		\texttt{src/experiment.py} & 参数网格搜索、多线程训练、结果记录与模型保存 \\
 		\texttt{src/watch\_best.py} & 加载最佳模型进行可视化或分数评估 \\
-		\texttt{q\_best.pkl} & 最终基础最佳 Q 表模型 \\
-		\texttt{q\_bonus\_best.pkl} & bonus 对比实验中的最佳模型 \\
+		\texttt{q\_best.pkl} & 最终基础最佳 Q 表模型（enhanced + death\_penalty, 100k） \\
+		\texttt{q\_bonus1\_best.pkl} & bonus1 改良状态最佳模型（enhanced\_top + death\_penalty, 100k） \\
+		\texttt{q\_bonus\_best.pkl} & bonus2 改良奖励最佳模型（enhanced + shaped\_v2, 100k） \\
+		\texttt{q\_combined\_best.pkl} & 组合最佳模型（enhanced\_top + shaped\_v2, 100k） \\
+		\texttt{scripts/eval\_unbounded.py} & 无步数限制评估脚本 \\
 		\texttt{results/experiment\_results.csv} & 基础参数实验（18 组初筛 + 3 组复训）完整数据 \\
 		\texttt{results\_bonus/experiment\_results.csv} & bonus 状态/奖励实验（8 组初筛 + 3 组复训）完整数据 \\
 		\bottomrule
@@ -382,7 +385,7 @@ def train(iteration, alpha, gamma, epsilon, obs_mul_factor=30,
 
 \begin{table}[H]
 	\centering
-	\caption{三种状态表示方法对比}
+	\caption{四种状态表示方法对比}
 	\label{tab:state_modes}
 	\begin{tabular}{cclp{4cm}}
 		\toprule
@@ -710,17 +713,53 @@ def shape_reward(obs, reward, terminated, action,
 
 图 \ref{fig:bonus_screen} 显示，Bonus 初筛中前三名均为 $\varepsilon = 0$ 的配置（增强/扩展状态 + 死亡惩罚/奖励塑形），初筛均分在 $111$–$120$ 之间，远高于其后使用探索的配置。这与基础参数实验的 $\varepsilon = 0$ 优势结论一致。
 
-\subsection{复训结果}
-\label{sec:bonus_retrain}
+\subsection{原版 bonus 复训与问题分析}
 
 \begin{figure}[H]
 	\centering
 	\includegraphics[width=0.85\textwidth]{bonus_retrain.png}
-	\caption{Bonus 复训平均分}
+	\caption{Bonus 复训平均分（原版方案）}
 	\label{fig:bonus_retrain}
 \end{figure}
 
-图 \ref{fig:bonus_retrain} 显示，三组复训得分均低于基础参数实验的复训得分。其中 \texttt{bonus + death\_penalty}（扩展状态）下降最多，从初筛 $115.90$ 跌至复训 $67.74$，印证了高维状态带来的数据稀疏问题。\texttt{enhanced + shaped}（奖励塑形）复训得分 $109.04$，略低于 \texttt{enhanced + death\_penalty}（$122.30$），说明奖励塑形在长周期训练中没有带来稳定的增益。
+原版 bonus 方案的三组复训均分（$67.74$–$122.30$）均低于基础参数实验的最佳得分（$165.18$）。其中 \texttt{bonus + death\_penalty}（6 维含旋转角）降至 $67.74$，数据稀疏严重；\texttt{enhanced + shaped}（原版奖励塑形）降至 $109.04$，速度惩罚和扇动惩罚产生了反效果。
+
+\subsection{改良方案最终对比}
+
+在对原版方案失败原因深入分析后，本实验提出 \texttt{enhanced\_top} 状态（bonus1）和 \texttt{shaped\_v2} 奖励（bonus2），并进行独立和组合验证。所有模型均采用 $\alpha=0.7, \gamma=0.95, \varepsilon=0.0, obs\_mul\_factor=30$ 训练 100k 局，50 局无步数限制评估：
+
+\begin{table}[H]
+	\centering
+	\caption{改良方案 100k 局最终对比}
+	\label{tab:bonus_final}
+	\begin{tabular}{lcccccc}
+		\toprule
+		模型 & 状态 & 奖励 & 均分 & 最高分 & 最低分 & 标准差 \\
+		\midrule
+		基础 best & enhanced & death\_penalty & $165.18$ & $984$ & $3$ & $175.66$ \\
+		bonus1 & enhanced\_top & death\_penalty & $275.40$ & $985$ & $4$ & $239.08$ \\
+		bonus2 & enhanced & shaped\_v2 & $311.16$ & $1271$ & $5$ & $326.50$ \\
+		组合最佳 & enhanced\_top & shaped\_v2 & $\mathbf{571.50}$ & $\mathbf{2620}$ & $2$ & $615.99$ \\
+		\bottomrule
+	\end{tabular}
+\end{table}
+
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=0.85\textwidth]{final_model_compare.png}
+	\caption{最终模型 100k 局无步数限制评估对比}
+	\label{fig:final_compare}
+\end{figure}
+
+如图 \ref{fig:final_compare} 和表 \ref{tab:bonus_final} 所示：
+
+\begin{enumerate}
+	\item \textbf{bonus1}（\texttt{enhanced\_top}）：仅增加 $player\_y - pipe\_top$ 一维，均分从 $165.18$ 提升到 $\mathbf{275.40}$（+67\%），Q 表仅增加 $\sim$6k 条目。证明上边界信息是 gaps 导航的关键缺失维度。
+	\item \textbf{bonus2}（\texttt{shaped\_v2}）：移除反直觉惩罚、加大中心奖励后均分达到 $\mathbf{311.16}$（+88\%），且方差增大反映模型敢于尝试更激进的穿越策略。
+	\item \textbf{组合模型}（\texttt{enhanced\_top + shaped\_v2}）：两项改进叠加产生协同效应，均分达到 $\mathbf{571.50}$，最高分 $\mathbf{2620}$，分别为基础 best 的 $3.5\times$ 和 $2.7\times$。标准差 $615.99$ 说明性能波动较大——模型能跑出极高分会合，但仍在部分种子中过早死亡，与 Q 表对罕见状态的覆盖不足有关。
+\end{enumerate}
+
+结论：\texttt{enhanced\_top} 状态和 \texttt{shaped\_v2} 奖励各自独立优于基础方案，两者结合效果更佳。最终提交模型：\texttt{q\_best.pkl}（基础）、\texttt{q\_bonus1\_best.pkl}（bonus1）、\texttt{q\_bonus\_best.pkl}（bonus2）、\texttt{q\_combined\_best.pkl}（组合）。
 
 \section{结论}
 

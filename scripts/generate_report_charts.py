@@ -149,6 +149,24 @@ def main():
         color="#4b7f52",
     )
 
+    # Final model comparison chart
+    final_models = pd.DataFrame(
+        [
+            {"name": "基础 best\n(enhanced + death)", "score": 165.18},
+            {"name": "bonus1\n(enhanced_top + death)", "score": 275.40},
+            {"name": "bonus2\n(enhanced + shaped_v2)", "score": 311.16},
+            {"name": "组合 best\n(enhanced_top + shaped_v2)", "score": 571.50},
+        ]
+    )
+    save_bar(
+        final_models,
+        "最终模型 100k 局无步数限制评估对比",
+        "name",
+        "score",
+        ASSETS_DIR / "final_model_compare.png",
+        color="#3f7cac",
+    )
+
 
 if __name__ == "__main__":
     main()

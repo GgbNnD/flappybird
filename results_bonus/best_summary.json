@@ -13,11 +13,11 @@
     "training_seconds": 979.27,
     "q_size": 15150,
     "model_path": "results_bonus/models/enhanced_reward_base_100000.pkl",
-    "scores": "[132, 29, 34, 132, 132, 44, 132, 10, 132, 67, 132, 74, 44, 132, 83, 10, 132, 62, 10, 31, 132, 132, 19, 25, 132, 124, 132, 132, 113, 132, 132, 29, 132, 132, 29, 132, 28, 132, 10, 40, 5, 19, 2, 20, 132, 28, 113, 32, 132, 37]",
-    "mean_score": 78.86000061035156,
+    "scores": "[163, 29, 34, 491, 137, 44, 191, 10, 134, 67, 142, 74, 44, 200, 83, 10, 347, 62, 10, 31, 191, 167, 19, 25, 206, 124, 200, 191, 113, 187, 257, 29, 242, 283, 29, 634, 28, 137, 10, 40, 5, 19, 2, 20, 194, 28, 113, 32, 250, 37]",
+    "mean_score": 122.3,
     "min_score": 2,
-    "max_score": 132,
-    "std_score": 51.540279388427734
+    "max_score": 634,
+    "std_score": 126.11
   },
   "screen_iterations": 30000,
   "retrain_iterations": 100000,
@@ -27,7 +27,7 @@
   "executor": "process",
   "grid": "bonus",
   "train_max_steps": 1000,
-  "eval_max_steps": 5000,
+  "eval_max_steps": "unbounded",
   "worker_stats_device": "cpu",
   "selection_device": "cuda",
   "cuda_device": "NVIDIA GeForce RTX 4060 Laptop GPU"

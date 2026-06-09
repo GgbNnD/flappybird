@@ -80,7 +80,7 @@
 		\end{figure}
 		\begin{figure}[h]
 			\centering
-			\includegraphics[width=0.3\linewidth]{QSY}
+			\includegraphics[width=0.3\linewidth]{qsy}
 		\end{figure}
 		\vspace{-0.2cm}
 		\begin{center}
@@ -113,7 +113,7 @@ Flappy Bird 是一款经典的 2D 横版躲避游戏，玩家需要操控小鸟�
 	\item 设计奖励塑形方案（bonus2），在死亡惩罚基础上增加飞行姿态相关的密集反馈，并与原始奖励方案进行对比。
 \end{itemize}
 
-最终基础最佳模型保存在 \texttt{q\_best.pkl} 中，50 局固定评估的平均得分为 $\mathbf{90.52}$，最高分为 $\mathbf{132}$。
+最终基础最佳模型保存在 \texttt{q\_best.pkl} 中，50 局无步数限制评估的平均得分为 $\mathbf{165.18}$，最高分为 $\mathbf{984}$。为反映模型真实能力，本章及后续章节所有数值均以无步数上限复评结果为准（旧报告因评估阶段设置了 5000 步上限而导致分数被截顶）。
 
 \section{项目内容与代码结构}
 
@@ -436,7 +436,7 @@ def train(iteration, alpha, gamma, epsilon, obs_mul_factor=30,
 \begin{enumerate}
 	\item 示例状态 \texttt{example}（平均分 $63.70$）的性能明显低于增强状态 \texttt{enhanced}（平均分 $120.20$）。核心原因在于 \texttt{example} 仅保留了"与下管道距离"，忽略了小鸟在整个管道间隙中的相对位置。实际上，如果小鸟位于间隙顶部，即便下管道距离合适，仍然可能撞到上管道。\texttt{enhanced} 通过加入"到缺口中心的垂直差"，使状态能够区分小鸟在间隙上部和下部的不同情况，因此得分接近翻倍。
 
-	\item 扩展状态 \texttt{bonus}（平均分 $115.90$）在初筛中表现同样出色，与 \texttt{enhanced} 仅差 $4.3$ 分。但复训后平均分降至 $53.84$（详见第 \ref{sec:bonus_retrain} 节），这是因为状态维度从 4 维增加到 6 维后，离散状态空间面积扩大，同等训练局数下每个状态—动作对的访问次数减少（即数据稀疏问题），导致策略稳定性变差。
+	\item 扩展状态 \texttt{bonus}（平均分 $115.90$）在初筛中表现同样出色，与 \texttt{enhanced} 仅差 $4.3$ 分。但复训后平均分降至 $67.74$（详见第 \ref{sec:bonus_retrain} 节），这是因为状态维度从 4 维增加到 6 维后，离散状态空间面积扩大，同等训练局数下每个状态—动作对的访问次数减少（即数据稀疏问题），导致策略稳定性变差。
 \end{enumerate}
 
 结论：\texttt{enhanced} 状态表示在表达能力和 Q 表规模之间取得了最佳平衡，被选作最终模型的默认状态模式。
@@ -544,14 +544,14 @@ def shape_reward(obs, reward, terminated, action,
 		\toprule
 		配置 & 初筛均分 & 复训均分 & 最高分 & 最低分 \\
 		\midrule
-		enhanced + death\_penalty & $120.20$ & $78.86$ & $132$ & $2$ \\
-		enhanced + shaped       & $119.95$ & $73.84$ & $132$ & $1$ \\
-		bonus + death\_penalty   & $115.90$ & $53.84$ & $132$ & $1$ \\
+		enhanced + death\_penalty & $120.20$ & $122.30$ & $634$ & $2$ \\
+		enhanced + shaped       & $119.95$ & $109.04$ & $482$ & $1$ \\
+		bonus + death\_penalty   & $115.90$ & $67.74$ & $331$ & $1$ \\
 		\bottomrule
 	\end{tabular}
 \end{table}
 
-然而在 100000 局复训后（图 \ref{fig:bonus_retrain}），奖励塑形方案的平均分（$73.84$）略低于基础方案（$78.86$），也低于全局最佳模型 $q\_best.pkl$ 的 $90.52$。可能原因有两方面：
+然而在 100000 局复训后（图 \ref{fig:bonus_retrain}），奖励塑形方案的平均分（$109.04$）略低于基础方案（$122.30$），也低于全局最佳模型 $q\_best.pkl$ 的 $165.18$。可能原因有两方面：
 \begin{enumerate}
 	\item 塑形系数的权重可能偏保守，使得中心奖励（最大仅 $+0.2$）在环境存活奖励（每帧 $+0.1$）面前不够突出；
 	\item 奖励塑形引入了更多的局部反馈信号，在某些情况下可能引导智能体收敛到次优策略——例如过于贴近间隙中心而失去通过某些偏置管道的最佳路径。
@@ -574,7 +574,7 @@ def shape_reward(obs, reward, terminated, action,
 	\item 状态离散系数 $obs\_mul\_factor \in \{24, 30, 36\}$
 \end{itemize}
 
-每组初筛训练 $30000$ 局、评估 $20$ 局；前 $3$ 组复训 $100000$ 局、评估 $50$ 局。训练每局最多 $1000$ 步，评估每局最多 $5000$ 步。
+每组初筛训练 $30000$ 局、评估 $20$ 局；前 $3$ 组复训 $100000$ 局、评估 $50$ 局。训练每局最多 $1000$ 步，防止单个训练回合过长。评估阶段最初设置了 $5000$ 步上限，但经分析发现此上限会截断高分游戏（大量游戏在达到步数上限时被强制终止，导致最高分被错误地记录为 $132$），因此本报告中所有复训评估数据均以取消步数上限后的重新评估结果为准。
 
 \subsection{初筛结果}
 
@@ -619,16 +619,16 @@ def shape_reward(obs, reward, terminated, action,
 	\centering
 	\caption{复训三组完整结果}
 	\label{tab:retrain}
-	\begin{tabular}{ccccccc}
+		\begin{tabular}{ccccccc}
 		\toprule
 		参数组 & $\alpha$ & $\gamma$ & $\varepsilon$ & 复训均分 & 最低分 & 最高分 \\
 		\midrule
-		基线参数 & $0.7$ & $0.95$ & $0.00$ & $\mathbf{90.52}$ & $3$ & $132$ \\
-		低速·快折扣·小探索 & $0.5$ & $0.90$ & $0.05$ & $82.48$ & $2$ & $132$ \\
-		中速·慢折扣·小探索 & $0.6$ & $0.99$ & $0.05$ & $51.02$ & $4$ & $132$ \\
+		基线参数 & $0.7$ & $0.95$ & $0.00$ & $\mathbf{165.18}$ & $3$ & $984$ \\
+		低速·快折扣·小探索 & $0.5$ & $0.90$ & $0.05$ & $136.44$ & $2$ & $669$ \\
+		中速·慢折扣·小探索 & $0.6$ & $0.99$ & $0.05$ & $53.38$ & $4$ & $250$ \\
 		\bottomrule
-	\end{tabular}
-\end{table}
+		\end{tabular}
+	\end{table}
 
 最终基础最佳模型为"基线参数"组（$\alpha=0.7, \gamma=0.95, \varepsilon=0.0, obs\_mul\_factor=30$），保存为 \texttt{q\_best.pkl}。Q 表规模为 $14912$ 条，训练耗时约 $903.8$ 秒。
 
@@ -641,7 +641,7 @@ def shape_reward(obs, reward, terminated, action,
 	\label{fig:best_scores}
 \end{figure}
 
-如图 \ref{fig:best_scores} 所示，50 局评估分数存在较大波动（标准差 $46.38$），最低 $3$ 分，最高 $132$ 分。这是因为 Flappy Bird 中管道序列随机生成，且一次错误 flap 可能迅速导致死亡。然而，模型在 50 局中共有 $21$ 局达到最高分 $132$（占比 $42\%$），且平均分超过 $90$，说明 Q 表已经学到了较有效的过管策略。第 3 局得分为 $3$ 的低分局可能是由于管道序列特别苛刻，而早期离散化带来的信息损失使其无法精细处理边缘情况。
+如图 \ref{fig:best_scores} 所示，50 局评估分数存在较大波动（标准差 $175.66$），最低 $3$ 分，最高 $984$ 分。这是因为 Flappy Bird 中管道序列随机生成，且一次错误 flap 可能迅速导致死亡。高分游戏中，模型已经掌握了可靠的穿管策略，能够持续存活并通过大量管道；而低分游戏往往由于管道在关键位置出现时离散化状态恰好落入 Q 表未充分优化的区域。值得注意的是，旧的实验中由于设定了 5000 步的评估上限，绝大多数高分游戏被强制截断在 132 分左右（旧报告称 21/50 局达到 132 分，实则为步数截顶），取消步数上限后模型的真实最高分达到 984，平均分也从 90.52 提升至 165.18。
 
 \subsection{参数影响分析}
 
@@ -650,7 +650,7 @@ def shape_reward(obs, reward, terminated, action,
 \subsubsection{学习率 $\alpha$}
 
 \begin{itemize}
-	\item $\alpha = 0.7$ 的基线参数表现最好（复训均分 $90.52$），$\alpha = 0.5$ 紧随其后（$82.48$）。这说明在该任务中，较大学习率有利于快速吸收新样本，尤其是在 100000 局的训练量下。
+	\item $\alpha = 0.7$ 的基线参数表现最好（复训均分 $165.18$），$\alpha = 0.5$ 紧随其后（$136.44$）。这说明在该任务中，较大学习率有利于快速吸收新样本，尤其是在 100000 局的训练量下。
 	\item $\alpha = 0.8$ 的配置在初筛仅为 $2.70$ 分（第 19 名），远低于同行其他参数，原因是过大的学习率使得 Q 值更新过于激进，导致对单次样本的噪声过度敏感，估值震荡剧烈。
 	\item $\alpha = 0.6$ 结合低速探索（$\varepsilon = 0.05$）的配置在初筛表现较差，部分组合仅有 $28.75$ 分，可能是学习速度不足导致策略未充分收敛。
 \end{itemize}
@@ -667,7 +667,7 @@ def shape_reward(obs, reward, terminated, action,
 
 \begin{itemize}
 	\item $\varepsilon = 0$ 在所有同参数对比中表现最好。核心原因是：Flappy Bird 中一次随机扇动容易导致撞管即死（$-1000$ 惩罚），而存活奖励（$+0.1$）、过管奖励（$+1.0$）远低于此，单次随机探索的期望代价极大。因此 $\varepsilon > 0$ 的显式探索在此估值量级下弊大于利。
-	\item $\varepsilon = 0.05$ 的配置仍能找到可用策略（如 $a=0.5, g=0.90, \varepsilon=0.05$ 复训均分 $82.48$），但总体弱于基线。
+	\item $\varepsilon = 0.05$ 的配置仍能找到可用策略（如 $a=0.5, g=0.90, \varepsilon=0.05$ 复训均分 $136.44$），但总体弱于基线。
 	\item $\varepsilon = 0.10$ 的配置几乎全部表现最差，如 $a=0.7, g=0.99, \varepsilon=0.10$ 仅 $3.80$ 分（倒数第二），说明过强的随机探索严重干扰了 Q 表的收敛。
 \end{itemize}
 
@@ -702,14 +702,14 @@ def shape_reward(obs, reward, terminated, action,
 	\label{fig:bonus_retrain}
 \end{figure}
 
-图 \ref{fig:bonus_retrain} 显示，三组复训得分均低于基础参数实验的复训得分。其中 \texttt{bonus + death\_penalty}（扩展状态）下降最多，从初筛 $115.90$ 跌至复训 $53.84$，印证了高维状态带来的数据稀疏问题。\texttt{enhanced + shaped}（奖励塑形）下降至 $73.84$，略低于 \texttt{enhanced + death\_penalty}（$78.86$），说明奖励塑形在长周期训练中没有带来稳定的增益。
+图 \ref{fig:bonus_retrain} 显示，三组复训得分均低于基础参数实验的复训得分。其中 \texttt{bonus + death\_penalty}（扩展状态）下降最多，从初筛 $115.90$ 跌至复训 $67.74$，印证了高维状态带来的数据稀疏问题。\texttt{enhanced + shaped}（奖励塑形）复训得分 $109.04$，略低于 \texttt{enhanced + death\_penalty}（$122.30$），说明奖励塑形在长周期训练中没有带来稳定的增益。
 
 \section{结论}
 
 本实验使用表格型 Q-Learning 为 Flappy Bird 训练智能体，得到如下结论：
 
 \begin{enumerate}
-	\item \textbf{Q-Learning 的有效性}：Q-Learning 能够在离散状态空间中逐步学习状态—动作价值，使智能体在无需了解游戏物理机制的前提下，通过试错获得穿越管道的有效策略。最终最佳模型 50 局平均 $90.52$ 分，远高于基线参数的 $32.2$ 分。
+	\item \textbf{Q-Learning 的有效性}：Q-Learning 能够在离散状态空间中逐步学习状态—动作价值，使智能体在无需了解游戏物理机制的前提下，通过试错获得穿越管道的有效策略。最终最佳模型 50 局无步数限制评估平均 $165.18$ 分，最高 $984$ 分，远超初筛时期多数参数组合的分值。
 
 	\item \textbf{状态表示的重要性}：加入"小鸟与管道缺口中心的垂直差"是提升性能的关键因素。\texttt{enhanced} 状态比作业示例状态 \texttt{example} 得分提升约 $2$ 倍（$120.20$ vs $63.70$）。过于丰富的状态表示（\texttt{bonus}）虽然初筛表现佳，但复训稳定性下降。
 
@@ -717,7 +717,7 @@ def shape_reward(obs, reward, terminated, action,
 
 	\item \textbf{奖励塑形}：bonus2 的奖励塑形能提供密集反馈并加速早期收敛，但在长周期训练中并未稳定超越基础死亡惩罚方案，说明塑形系数的设定需要与任务奖赏量级仔细匹配。
 
-	\item \textbf{最终模型}：以 $\alpha=0.7, \gamma=0.95, \varepsilon=0.0, obs\_mul\_factor=30$、状态模式 \texttt{enhanced}、奖励模式 \texttt{death\_penalty} 训练的 \texttt{q\_best.pkl} 为最终提交模型。
+	\item \textbf{最终模型}：以 $\alpha=0.7, \gamma=0.95, \varepsilon=0.0, obs\_mul\_factor=30$、状态模式 \texttt{enhanced}、奖励模式 \texttt{death\_penalty} 训练的 \texttt{q\_best.pkl} 为最终提交模型。注意：旧版报告因评估阶段设置了 5000 步步数上限，导致分数被截顶（报告的最高分 132 实为该上限的产物）。本报告已重新进行无步数限制评估，数据为模型的真实表现。
 \end{enumerate}
 
 \end{document}

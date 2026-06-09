@@ -11,11 +11,11 @@
     "training_seconds": 903.774,
     "q_size": 14912,
     "model_path": "/home/cells/flappybird/results/models/baseline_100000.pkl",
-    "scores": "[19, 54, 3, 126, 132, 132, 132, 132, 39, 132, 11, 21, 76, 29, 132, 132, 132, 72, 132, 132, 124, 96, 132, 89, 98, 132, 119, 125, 121, 132, 26, 7, 132, 32, 33, 33, 132, 83, 33, 132, 26, 132, 53, 107, 53, 132, 132, 132, 132, 46]",
-    "mean_score": 90.5199966430664,
+    "scores": "[19, 54, 3, 126, 147, 269, 278, 420, 39, 254, 11, 21, 76, 29, 194, 234, 317, 72, 320, 158, 124, 96, 170, 89, 98, 207, 119, 125, 121, 236, 26, 7, 246, 32, 33, 33, 984, 83, 33, 680, 26, 230, 53, 107, 53, 330, 368, 221, 242, 46]",
+    "mean_score": 165.18,
     "min_score": 3,
-    "max_score": 132,
-    "std_score": 46.381996154785156
+    "max_score": 984,
+    "std_score": 175.66
   },
   "screen_iterations": 30000,
   "retrain_iterations": 100000,
@@ -24,7 +24,7 @@
   "workers": 6,
   "executor": "process",
   "train_max_steps": 1000,
-  "eval_max_steps": 5000,
+  "eval_max_steps": "unbounded",
   "worker_stats_device": "cpu",
   "selection_device": "cuda",
   "cuda_device": "NVIDIA GeForce RTX 4060 Laptop GPU"

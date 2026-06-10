@@ -101,6 +101,10 @@
 
 	\pagenumbering{arabic}
 
+\newpage
+\tableofcontents
+\newpage
+
 \section{引言}
 
 Flappy Bird 是一款经典的 2D 横版躲避游戏，玩家需要操控小鸟通过上下间隙各异的管道障碍。由于游戏具有实时性、随机管道分布和重力影响，传统的手动控制或基于规则的方法难以泛化；而强化学习通过与环境交互来自动学习最优策略，非常适合此类序贯决策问题。
@@ -342,9 +346,142 @@ def train(iteration, alpha, gamma, epsilon, obs_mul_factor=30,
     return player
 \end{lstlisting}
 
-\subsection{状态表示设计（bonus1）}
+\section{实验}
 
-\subsubsection{环境观测值 $obs$}
+\subsection{基础参数实验}
+
+\subsubsection{实验设置}
+
+实验采用两阶段策略：初筛阶段用较少训练局数（30000 局）快速扫描参数空间，选出最优的 $3$ 组候选；复训阶段将这些候选用更多局数（100000 局）精细训练并全面评估。
+
+基础实验初筛共 $18$ 组参数组合，覆盖以下范围：
+
+\begin{itemize}
+	\item 学习率 $\alpha \in \{0.5, 0.6, 0.7, 0.8\}$
+	\item 折扣因子 $\gamma \in \{0.90, 0.95, 0.99\}$
+	\item 探索率 $\varepsilon \in \{0.0, 0.05, 0.10\}$
+	\item 状态离散系数 $obs\_mul\_factor \in \{24, 30, 36\}$
+\end{itemize}
+
+每组初筛训练 $30000$ 局、评估 $20$ 局；前 $3$ 组复训 $100000$ 局、评估 $50$ 局。训练每局最多 $1000$ 步，防止单个训练回合过长。评估阶段最初设置了 $5000$ 步上限，但经分析发现此上限会截断高分游戏（大量游戏在达到步数上限时被强制终止，导致最高分被错误地记录为 $132$），因此本报告中所有复训评估数据均以取消步数上限后的重新评估结果为准。
+
+\subsubsection{初筛结果}
+
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=0.9\textwidth]{base_screen_top12.png}
+	\caption{基础参数初筛 Top 12 平均分}
+	\label{fig:screen}
+\end{figure}
+
+如图 \ref{fig:screen} 所示，初筛前三名为：
+
+\begin{table}[H]
+	\centering
+	\caption{初筛前三参数组合}
+	\label{tab:screen_top3}
+	\begin{tabular}{cccccc}
+		\toprule
+		参数组 & $\alpha$ & $\gamma$ & $\varepsilon$ & $obs\_mul\_factor$ & 初筛均分 \\
+		\midrule
+		基线参数 & $0.7$ & $0.95$ & $0.00$ & $30$ & $73.90$ \\
+		低速学习·快折扣·小探索 & $0.5$ & $0.90$ & $0.05$ & $30$ & $54.85$ \\
+		中速学习·慢折扣·小探索 & $0.6$ & $0.99$ & $0.05$ & $30$ & $49.45$ \\
+		\bottomrule
+	\end{tabular}
+\end{table}
+
+值得注意的是，初筛第一名（基线参数）的 $\varepsilon = 0$，即没有显式随机探索。这并不等于完全没有探索，原因如前所述：训练早期大量未访问的状态—动作对 Q 值均为 0，并列最优动作的随机选择机制已经引入了足够的随机性。额外 $\varepsilon$ 探索在 Flappy Bird 中尤其危险，因为随机扇动极易导致撞管或触顶——而死亡惩罚为 $-1000$，远超存活和过管奖励。
+
+\subsubsection{复训结果}
+
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=0.85\textwidth]{base_retrain.png}
+	\caption{基础参数复训结果}
+	\label{fig:retrain}
+\end{figure}
+
+如图 \ref{fig:retrain} 和表 \ref{tab:retrain} 所示，复训后基线参数继续领先。
+
+\begin{table}[H]
+	\centering
+	\caption{复训三组完整结果}
+	\label{tab:retrain}
+		\begin{tabular}{ccccccc}
+		\toprule
+		参数组 & $\alpha$ & $\gamma$ & $\varepsilon$ & 复训均分 & 最低分 & 最高分 \\
+		\midrule
+		基线参数 & $0.7$ & $0.95$ & $0.00$ & $\mathbf{165.18}$ & $3$ & $984$ \\
+		低速·快折扣·小探索 & $0.5$ & $0.90$ & $0.05$ & $136.44$ & $2$ & $669$ \\
+		中速·慢折扣·小探索 & $0.6$ & $0.99$ & $0.05$ & $53.38$ & $4$ & $250$ \\
+		\bottomrule
+		\end{tabular}
+	\end{table}
+
+最终基础最佳模型为"基线参数"组（$\alpha=0.7, \gamma=0.95, \varepsilon=0.0, obs\_mul\_factor=30$），保存为 \texttt{q\_best.pkl}。Q 表规模为 $14912$ 条，训练耗时约 $903.8$ 秒。
+
+\subsubsection{最佳模型 50 局分数分布}
+
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=0.85\textwidth]{best_scores_line.png}
+	\caption{最佳模型 50 局评估分数走势}
+	\label{fig:best_scores}
+\end{figure}
+
+如图 \ref{fig:best_scores} 所示，50 局评估分数存在较大波动（标准差 $175.66$），最低 $3$ 分，最高 $984$ 分。这是因为 Flappy Bird 中管道序列随机生成，且一次错误 flap 可能迅速导致死亡。高分游戏中，模型已经掌握了可靠的穿管策略，能够持续存活并通过大量管道；而低分游戏往往由于管道在关键位置出现时离散化状态恰好落入 Q 表未充分优化的区域。值得注意的是，旧的实验中由于设定了 5000 步的评估上限，绝大多数高分游戏被强制截断在 132 分左右（旧报告称 21/50 局达到 132 分，实则为步数截顶），取消步数上限后模型的真实最高分达到 984，平均分也从 90.52 提升至 165.18。
+
+\subsubsection{参数影响分析}
+
+下面结合实验数据，从理论角度分析各参数对模型性能的具体影响。
+
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=0.95\textwidth]{param_analysis.png}
+	\caption{各参数对初筛性能的影响（基于 18 组 30k 局训练，按参数值分组取平均）}
+	\label{fig:param_analysis}
+\end{figure}
+
+如图 \ref{fig:param_analysis} 所示，随着各参数取值变化，初筛平均分呈现明显趋势。以下结合具体实验数据逐一分析。
+
+\paragraph{学习率 $\alpha$}
+
+\begin{itemize}
+	\item $\alpha = 0.7$ 的基线参数表现最好（复训均分 $165.18$），$\alpha = 0.5$ 紧随其后（$136.44$）。这说明在该任务中，较大学习率有利于快速吸收新样本，尤其是在 100000 局的训练量下。
+	\item $\alpha = 0.8$ 的配置在初筛仅为 $2.70$ 分（第 19 名），远低于同行其他参数，原因是过大的学习率使得 Q 值更新过于激进，导致对单次样本的噪声过度敏感，估值震荡剧烈。
+	\item $\alpha = 0.6$ 结合低速探索（$\varepsilon = 0.05$）的配置在初筛表现较差，部分组合仅有 $28.75$ 分，可能是学习速度不足导致策略未充分收敛。
+\end{itemize}
+
+\paragraph{折扣因子 $\gamma$}
+
+\begin{itemize}
+	\item $\gamma = 0.95$ 在所有 top 配置中表现最好。它既不过于短视（$\gamma = 0.90$ 只关注前几步收益，难以形成长远过管策略），也不过于长视（$\gamma = 0.99$ 使得早期 death penalty 的回传衰减极慢，增加了优化难度）。
+	\item 在 Flappy Bird 任务中，管道间隙大约每 $50$–$60$ 帧出现一次。$\gamma = 0.99$ 意味着 $50$ 步后的奖励仍有 $0.99^{50} \approx 0.605$ 的权重，可能导致智能体对过于遥远的事件信号产生不合理关联，降低训练稳定性。
+	\item $\gamma = 0.90$ 则过于重视近期收益，$10$ 步后信号已衰减至 $0.90^{10} \approx 0.349$，不利于形成"穿越当前管道→为下一管道做准备"的远见性策略。
+\end{itemize}
+
+\paragraph{探索率 $\varepsilon$}
+
+\begin{itemize}
+	\item $\varepsilon = 0$ 在所有同参数对比中表现最好。核心原因是：Flappy Bird 中一次随机扇动容易导致撞管即死（$-1000$ 惩罚），而存活奖励（$+0.1$）、过管奖励（$+1.0$）远低于此，单次随机探索的期望代价极大。因此 $\varepsilon > 0$ 的显式探索在此估值量级下弊大于利。
+	\item $\varepsilon = 0.05$ 的配置仍能找到可用策略（如 $a=0.5, g=0.90, \varepsilon=0.05$ 复训均分 $136.44$），但总体弱于基线。
+	\item $\varepsilon = 0.10$ 的配置几乎全部表现最差，如 $a=0.7, g=0.99, \varepsilon=0.10$ 仅 $3.80$ 分（倒数第二），说明过强的随机探索严重干扰了 Q 表的收敛。
+\end{itemize}
+
+\paragraph{状态离散系数 \texttt{obs\_mul\_factor}}
+
+\begin{itemize}
+	\item $obs\_mul\_factor = 30$ 在所有对比中表现最好。它提供了合理的状态空间分辨率：既能区分不同的飞行位置，又不至于使 Q 表过于稀疏。
+	\item $obs\_mul\_factor = 24$（较粗粒度）对应的初筛均分偏低（如 $a=0.6, g=0.99, \varepsilon=0.10$ 仅 $20.25$ 分），因为粗糙的离散化混淆了需要精细区分的状态，例如"接近上管道"和"接近下管道"可能被映射到同一个状态键。
+	\item $obs\_mul\_factor = 36$（较细粒度）对应的组合几乎是全部最差（如 $a=0.7, g=0.99, \varepsilon=0.10$ 仅 $3.95$ 分），因为过于精细的离散化使得状态空间呈指数级膨胀，而 30000/100000 局的训练量无法充分覆盖每个状态—动作对，Q 表大量条目保持为 $0$ 的初始值。
+\end{itemize}
+
+\subsection{Bonus 状态与奖励实验}
+
+\subsubsection{状态表示改良（bonus1）与实验结果}
+
+\textbf{环境观测值 $obs$}
 
 环境返回 12 维归一化观测向量，各维度的含义如表 \ref{tab:obs} 所示：
 
@@ -368,7 +505,7 @@ def train(iteration, alpha, gamma, epsilon, obs_mul_factor=30,
 
 由于 Q 表需要可哈希的离散键值，所有连续观测值乘以 \texttt{obs\_mul\_factor}$=30$ 并取整。
 
-\subsubsection{最近管道选择}
+\textbf{最近管道选择}
 
 画面中可能同时存在多个管道，但控制当前动作最有意义的是"与小鸟最近且尚未完全通过的管道"。代码中通过比较管道水平位置 $x$ 与小鸟固定水平位置 $0.2$ 来决定：
 
@@ -379,7 +516,7 @@ def train(iteration, alpha, gamma, epsilon, obs_mul_factor=30,
 
 这避免了小鸟已通过某管道后，状态仍被旧的障碍物信息干扰。
 
-\subsubsection{三种状态表示方法及设计思路}
+\textbf{状态表示方法设计}
 
 本项目实现了三种 \texttt{state\_mode}，从简单到精细地逐步丰富状态向量，如表 \ref{tab:state_modes} 所示。
 
@@ -434,7 +571,7 @@ def train(iteration, alpha, gamma, epsilon, obs_mul_factor=30,
 \end{table}
 
 
-\subsubsection{与示例方法的性能比较}
+\textbf{性能比较}
 
 图 \ref{fig:state_compare} 展示了在相同训练参数（$\alpha=0.7, \gamma=0.95, \varepsilon=0.0$、30000 局训练）下，四种方案的初筛平均得分对比。
 
@@ -457,9 +594,9 @@ def train(iteration, alpha, gamma, epsilon, obs_mul_factor=30,
 
 结论：\texttt{enhanced\_top} 状态表示在表达能力和 Q 表规模之间取得了最佳平衡，被选作 bonus1 的最终方案（模型保存为 \texttt{q\_bonus1\_best.pkl}）。
 
-\subsection{奖励分配设计（bonus2）}
+\subsubsection{奖励塑形改良（bonus2）与实验结果}
 
-\subsubsection{环境原始奖励}
+\textbf{环境原始奖励与死亡惩罚}
 
 环境为智能体提供离散奖励信号：
 
@@ -481,7 +618,7 @@ def train(iteration, alpha, gamma, epsilon, obs_mul_factor=30,
 
 在本项目的基础奖励方案（\texttt{reward\_mode="death\_penalty"}）中，保留存活和过管奖励不变，但将死亡奖励从 $-1$ 放大为 $-1000$。原因在于：Flappy Bird 的核心目标首先是不死，只有活着才能持续获得分数。如果死亡惩罚与过管奖励（$+1.0$）差距不足以拉开，智能体可能无法充分重视危险状态，导致 Q 表难以收敛到安全稳定的策略。死亡惩罚的放大使得时序差分误差在每次死亡后迅速向后传播，将"导致死亡的动作"的 Q 值压至很低的水平。
 
-\subsubsection{奖励塑形方案}
+\textbf{奖励塑形方案}
 
 bonus2 实现了 \texttt{reward\_mode="shaped"}，在死亡惩罚之上增加飞行姿态相关的密集中间反馈（Reward Shaping）：
 
@@ -548,7 +685,7 @@ def shape_reward(obs, reward, terminated, action,
 	\end{tabular}
 \end{table}
 
-\subsubsection{奖励塑形 v2 改良方案}
+\textbf{奖励塑形 v2 改良方案}
 
 原版 \texttt{shaped} 方案存在两个方向性错误：\textbf{速度惩罚}惩罚了 flap 产生的垂直速度，但 flap 是越过管道的必要动作；\textbf{扇动惩罚}惩罚 flap 动作本身，唯独 flap 动作是智能体的唯一选择。此外中心奖励最大仅 $+0.2$，相对每帧存活奖励 $+0.1$ 引导力不足。
 
@@ -560,7 +697,7 @@ def shape_reward(obs, reward, terminated, action,
 	\item 保留死亡惩罚 $-1000$ 和触顶惩罚（降至 $-50$，因死亡惩罚已足够覆盖）。
 \end{itemize}
 
-\subsubsection{bonus2 对比结果}
+\textbf{实验结果与对比}
 
 \begin{table}[H]
 	\centering
@@ -581,151 +718,7 @@ def shape_reward(obs, reward, terminated, action,
 
 结论：bonus2 的 \texttt{shaped\_v2} 奖励塑形通过增强中心引导和清理错误信号，在 100k 局训练后显著超越基础死亡惩罚方案。
 
-\section{参数调整实验与结果分析}
-
-\subsection{实验设置}
-
-实验采用两阶段策略：初筛阶段用较少训练局数（30000 局）快速扫描参数空间，选出最优的 $3$ 组候选；复训阶段将这些候选用更多局数（100000 局）精细训练并全面评估。
-
-基础实验初筛共 $18$ 组参数组合，覆盖以下范围：
-
-\begin{itemize}
-	\item 学习率 $\alpha \in \{0.5, 0.6, 0.7, 0.8\}$
-	\item 折扣因子 $\gamma \in \{0.90, 0.95, 0.99\}$
-	\item 探索率 $\varepsilon \in \{0.0, 0.05, 0.10\}$
-	\item 状态离散系数 $obs\_mul\_factor \in \{24, 30, 36\}$
-\end{itemize}
-
-每组初筛训练 $30000$ 局、评估 $20$ 局；前 $3$ 组复训 $100000$ 局、评估 $50$ 局。训练每局最多 $1000$ 步，防止单个训练回合过长。评估阶段最初设置了 $5000$ 步上限，但经分析发现此上限会截断高分游戏（大量游戏在达到步数上限时被强制终止，导致最高分被错误地记录为 $132$），因此本报告中所有复训评估数据均以取消步数上限后的重新评估结果为准。
-
-\subsection{初筛结果}
-
-\begin{figure}[H]
-	\centering
-	\includegraphics[width=0.9\textwidth]{base_screen_top12.png}
-	\caption{基础参数初筛 Top 12 平均分}
-	\label{fig:screen}
-\end{figure}
-
-如图 \ref{fig:screen} 所示，初筛前三名为：
-
-\begin{table}[H]
-	\centering
-	\caption{初筛前三参数组合}
-	\label{tab:screen_top3}
-	\begin{tabular}{cccccc}
-		\toprule
-		参数组 & $\alpha$ & $\gamma$ & $\varepsilon$ & $obs\_mul\_factor$ & 初筛均分 \\
-		\midrule
-		基线参数 & $0.7$ & $0.95$ & $0.00$ & $30$ & $73.90$ \\
-		低速学习·快折扣·小探索 & $0.5$ & $0.90$ & $0.05$ & $30$ & $54.85$ \\
-		中速学习·慢折扣·小探索 & $0.6$ & $0.99$ & $0.05$ & $30$ & $49.45$ \\
-		\bottomrule
-	\end{tabular}
-\end{table}
-
-值得注意的是，初筛第一名（基线参数）的 $\varepsilon = 0$，即没有显式随机探索。这并不等于完全没有探索，原因如前所述：训练早期大量未访问的状态—动作对 Q 值均为 0，并列最优动作的随机选择机制已经引入了足够的随机性。额外 $\varepsilon$ 探索在 Flappy Bird 中尤其危险，因为随机扇动极易导致撞管或触顶——而死亡惩罚为 $-1000$，远超存活和过管奖励。
-
-\subsection{复训结果}
-
-\begin{figure}[H]
-	\centering
-	\includegraphics[width=0.85\textwidth]{base_retrain.png}
-	\caption{基础参数复训结果}
-	\label{fig:retrain}
-\end{figure}
-
-如图 \ref{fig:retrain} 和表 \ref{tab:retrain} 所示，复训后基线参数继续领先。
-
-\begin{table}[H]
-	\centering
-	\caption{复训三组完整结果}
-	\label{tab:retrain}
-		\begin{tabular}{ccccccc}
-		\toprule
-		参数组 & $\alpha$ & $\gamma$ & $\varepsilon$ & 复训均分 & 最低分 & 最高分 \\
-		\midrule
-		基线参数 & $0.7$ & $0.95$ & $0.00$ & $\mathbf{165.18}$ & $3$ & $984$ \\
-		低速·快折扣·小探索 & $0.5$ & $0.90$ & $0.05$ & $136.44$ & $2$ & $669$ \\
-		中速·慢折扣·小探索 & $0.6$ & $0.99$ & $0.05$ & $53.38$ & $4$ & $250$ \\
-		\bottomrule
-		\end{tabular}
-	\end{table}
-
-最终基础最佳模型为"基线参数"组（$\alpha=0.7, \gamma=0.95, \varepsilon=0.0, obs\_mul\_factor=30$），保存为 \texttt{q\_best.pkl}。Q 表规模为 $14912$ 条，训练耗时约 $903.8$ 秒。
-
-\subsection{最佳模型 50 局分数分布}
-
-\begin{figure}[H]
-	\centering
-	\includegraphics[width=0.85\textwidth]{best_scores_line.png}
-	\caption{最佳模型 50 局评估分数走势}
-	\label{fig:best_scores}
-\end{figure}
-
-如图 \ref{fig:best_scores} 所示，50 局评估分数存在较大波动（标准差 $175.66$），最低 $3$ 分，最高 $984$ 分。这是因为 Flappy Bird 中管道序列随机生成，且一次错误 flap 可能迅速导致死亡。高分游戏中，模型已经掌握了可靠的穿管策略，能够持续存活并通过大量管道；而低分游戏往往由于管道在关键位置出现时离散化状态恰好落入 Q 表未充分优化的区域。值得注意的是，旧的实验中由于设定了 5000 步的评估上限，绝大多数高分游戏被强制截断在 132 分左右（旧报告称 21/50 局达到 132 分，实则为步数截顶），取消步数上限后模型的真实最高分达到 984，平均分也从 90.52 提升至 165.18。
-
-\subsection{参数影响分析}
-
-下面结合实验数据，从理论角度分析各参数对模型性能的具体影响。
-
-\subsubsection{学习率 $\alpha$}
-
-\begin{itemize}
-	\item $\alpha = 0.7$ 的基线参数表现最好（复训均分 $165.18$），$\alpha = 0.5$ 紧随其后（$136.44$）。这说明在该任务中，较大学习率有利于快速吸收新样本，尤其是在 100000 局的训练量下。
-	\item $\alpha = 0.8$ 的配置在初筛仅为 $2.70$ 分（第 19 名），远低于同行其他参数，原因是过大的学习率使得 Q 值更新过于激进，导致对单次样本的噪声过度敏感，估值震荡剧烈。
-	\item $\alpha = 0.6$ 结合低速探索（$\varepsilon = 0.05$）的配置在初筛表现较差，部分组合仅有 $28.75$ 分，可能是学习速度不足导致策略未充分收敛。
-\end{itemize}
-
-\subsubsection{折扣因子 $\gamma$}
-
-\begin{itemize}
-	\item $\gamma = 0.95$ 在所有 top 配置中表现最好。它既不过于短视（$\gamma = 0.90$ 只关注前几步收益，难以形成长远过管策略），也不过于长视（$\gamma = 0.99$ 使得早期 death penalty 的回传衰减极慢，增加了优化难度）。
-	\item 在 Flappy Bird 任务中，管道间隙大约每 $50$–$60$ 帧出现一次。$\gamma = 0.99$ 意味着 $50$ 步后的奖励仍有 $0.99^{50} \approx 0.605$ 的权重，可能导致智能体对过于遥远的事件信号产生不合理关联，降低训练稳定性。
-	\item $\gamma = 0.90$ 则过于重视近期收益，$10$ 步后信号已衰减至 $0.90^{10} \approx 0.349$，不利于形成"穿越当前管道→为下一管道做准备"的远见性策略。
-\end{itemize}
-
-\subsubsection{探索率 $\varepsilon$}
-
-\begin{itemize}
-	\item $\varepsilon = 0$ 在所有同参数对比中表现最好。核心原因是：Flappy Bird 中一次随机扇动容易导致撞管即死（$-1000$ 惩罚），而存活奖励（$+0.1$）、过管奖励（$+1.0$）远低于此，单次随机探索的期望代价极大。因此 $\varepsilon > 0$ 的显式探索在此估值量级下弊大于利。
-	\item $\varepsilon = 0.05$ 的配置仍能找到可用策略（如 $a=0.5, g=0.90, \varepsilon=0.05$ 复训均分 $136.44$），但总体弱于基线。
-	\item $\varepsilon = 0.10$ 的配置几乎全部表现最差，如 $a=0.7, g=0.99, \varepsilon=0.10$ 仅 $3.80$ 分（倒数第二），说明过强的随机探索严重干扰了 Q 表的收敛。
-\end{itemize}
-
-\subsubsection{状态离散系数 \texttt{obs\_mul\_factor}}
-
-\begin{itemize}
-	\item $obs\_mul\_factor = 30$ 在所有对比中表现最好。它提供了合理的状态空间分辨率：既能区分不同的飞行位置，又不至于使 Q 表过于稀疏。
-	\item $obs\_mul\_factor = 24$（较粗粒度）对应的初筛均分偏低（如 $a=0.6, g=0.99, \varepsilon=0.10$ 仅 $20.25$ 分），因为粗糙的离散化混淆了需要精细区分的状态，例如"接近上管道"和"接近下管道"可能被映射到同一个状态键。
-	\item $obs\_mul\_factor = 36$（较细粒度）对应的组合几乎是全部最差（如 $a=0.7, g=0.99, \varepsilon=0.10$ 仅 $3.95$ 分），因为过于精细的离散化使得状态空间呈指数级膨胀，而 30000/100000 局的训练量无法充分覆盖每个状态—动作对，Q 表大量条目保持为 $0$ 的初始值。
-\end{itemize}
-
-\section{Bonus 实验完整结果}
-
-\subsection{初筛结果}
-
-\begin{figure}[H]
-	\centering
-	\includegraphics[width=0.85\textwidth]{bonus_screen.png}
-	\caption{Bonus 状态与奖励初筛平均分}
-	\label{fig:bonus_screen}
-\end{figure}
-
-图 \ref{fig:bonus_screen} 显示，Bonus 初筛中前三名均为 $\varepsilon = 0$ 的配置（增强/扩展状态 + 死亡惩罚/奖励塑形），初筛均分在 $111$–$120$ 之间，远高于其后使用探索的配置。这与基础参数实验的 $\varepsilon = 0$ 优势结论一致。
-
-\subsection{原版 bonus 复训与问题分析}
-
-\begin{figure}[H]
-	\centering
-	\includegraphics[width=0.85\textwidth]{bonus_retrain.png}
-	\caption{Bonus 复训平均分（原版方案）}
-	\label{fig:bonus_retrain}
-\end{figure}
-
-原版 bonus 方案的三组复训均分（$67.74$–$122.30$）均低于基础参数实验的最佳得分（$165.18$）。其中 \texttt{bonus + death\_penalty}（6 维含旋转角）降至 $67.74$，数据稀疏严重；\texttt{enhanced + shaped}（原版奖励塑形）降至 $109.04$，速度惩罚和扇动惩罚产生了反效果。
-
-\subsection{改良方案最终对比}
+\subsubsection{组合模型最终对比}
 
 在对原版方案失败原因深入分析后，本实验提出 \texttt{enhanced\_top} 状态（bonus1）和 \texttt{shaped\_v2} 奖励（bonus2），并进行独立和组合验证。所有模型均采用 $\alpha=0.7, \gamma=0.95, \varepsilon=0.0, obs\_mul\_factor=30$ 训练 100k 局，50 局无步数限制评估：
 

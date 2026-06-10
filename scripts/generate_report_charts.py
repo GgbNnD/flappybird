@@ -67,6 +67,119 @@ def bonus_label(row):
     )
 
 
+def param_analysis_chart(screen_df, output):
+    """Generate a 2x2 param-influence chart: alpha, gamma, epsilon, obs_mul_factor."""
+    import numpy as np
+
+    screen = screen_df.copy()
+    params = [
+        ("alpha",      "学习率 $\\alpha$",       [0.5, 0.6, 0.7, 0.8]),
+        ("gamma",      "折扣因子 $\\gamma$",     [0.90, 0.95, 0.99]),
+        ("epsilon",    "探索率 $\\varepsilon$",  [0.0, 0.05, 0.10]),
+        ("obs_mul_factor", "离散系数",           [24, 30, 36]),
+    ]
+
+    fig, axes = plt.subplots(2, 2, figsize=(12, 9))
+    colors = ["#31708e", "#4f8a5b", "#b65f37", "#7c5aa6"]
+
+    for idx, (col, title, values) in enumerate(params):
+        ax = axes[idx // 2][idx % 2]
+        means = []
+        stds = []
+        for v in values:
+            subset = screen[screen[col] == v]
+            if len(subset) == 0:
+                means.append(0)
+                stds.append(0)
+            else:
+                means.append(subset["mean_score"].mean())
+                stds.append(subset["mean_score"].std(ddof=1) if len(subset) > 1 else 0)
+
+        y_pos = range(len(values))
+        bars = ax.barh(y_pos, means, color=colors[idx],
+                       edgecolor="white", linewidth=0.8, alpha=0.9)
+        ax.set_yticks(y_pos)
+        y_labels = [str(v) for v in values]
+        ax.set_yticklabels(y_labels)
+        ax.invert_yaxis()
+        ax.set_title(title, fontsize=13, fontweight="bold")
+        ax.set_xlabel("初筛平均分", fontsize=11)
+        ax.grid(axis="x", linestyle="--", alpha=0.3)
+        for i, (m, s) in enumerate(zip(means, stds)):
+            ax.text(m + max(0.5, s * 0.05), i, f"{m:.1f}",
+                    va="center", fontsize=9, color="#333")
+
+    fig.suptitle("参数对初筛性能的影响（基于 30k 局训练）", fontsize=15, fontweight="bold", y=1.01)
+    fig.tight_layout()
+    fig.savefig(output, dpi=160, bbox_inches="tight")
+    plt.close(fig)
+
+
+def single_param_charts(screen_df, assets_dir):
+    """Generate individual parameter-analysis charts, one per parameter."""
+    import numpy as np
+
+    screen = screen_df.copy()
+    params = [
+        ("alpha",      "学习率 $\\alpha$ 对初筛性能的影响",       [0.5, 0.6, 0.7, 0.8],   "#31708e"),
+        ("gamma",      "折扣因子 $\\gamma$ 对初筛性能的影响",     [0.90, 0.95, 0.99],     "#4f8a5b"),
+        ("epsilon",    "探索率 $\\varepsilon$ 对初筛性能的影响",  [0.0, 0.05, 0.10],      "#b65f37"),
+        ("obs_mul_factor", "离散系数对初筛性能的影响",            [24, 30, 36],           "#7c5aa6"),
+    ]
+    filenames = [
+        "param_alpha.png", "param_gamma.png", "param_epsilon.png", "param_obs.png",
+    ]
+
+    for (col, title, values, color), fname in zip(params, filenames):
+        means = []
+        stds = []
+        for v in values:
+            subset = screen[screen[col] == v]
+            if len(subset) == 0:
+                means.append(0)
+                stds.append(0)
+            else:
+                means.append(subset["mean_score"].mean())
+                stds.append(subset["mean_score"].std(ddof=1) if len(subset) > 1 else 0)
+
+        y_pos = range(len(values))
+        fig, ax = plt.subplots(figsize=(8, 3.5))
+        ax.barh(y_pos, means, color=color, edgecolor="white",
+                linewidth=0.8, alpha=0.9)
+        ax.set_yticks(y_pos)
+        ax.set_yticklabels([str(v) for v in values])
+        ax.invert_yaxis()
+        ax.set_title(title, fontsize=13, fontweight="bold")
+        ax.set_xlabel("初筛平均分", fontsize=11)
+        ax.grid(axis="x", linestyle="--", alpha=0.3)
+        for i, (m, s) in enumerate(zip(means, stds)):
+            ax.text(m + max(0.5, s * 0.05), i, f"{m:.1f}",
+                    va="center", fontsize=10, color="#333")
+        fig.tight_layout()
+        fig.savefig(assets_dir / fname, dpi=160)
+        plt.close(fig)
+
+
+def param_table_data(screen_df):
+    """Print a LaTeX table of raw parameter means for the report."""
+    screen = screen_df.copy()
+    for col, title, values in [
+        ("alpha", "α", [0.5, 0.6, 0.7, 0.8]),
+        ("gamma", "γ", [0.90, 0.95, 0.99]),
+        ("epsilon", "ε", [0.0, 0.05, 0.10]),
+        ("obs_mul_factor", "离散", [24, 30, 36]),
+    ]:
+        print(f"\n--- {title} ---")
+        for v in values:
+            subset = screen[screen[col] == v]
+            if len(subset) == 0:
+                continue
+            trials = subset["trial_id"].tolist()
+            mean = subset["mean_score"].mean()
+            std = subset["mean_score"].std(ddof=1) if len(subset) > 1 else 0
+            print(f"  {v}: n={len(subset)}, mean={mean:.2f}, std={std:.2f}, trials={trials}")
+
+
 def main():
     configure_fonts()
     ASSETS_DIR.mkdir(parents=True, exist_ok=True)
@@ -169,6 +282,12 @@ def main():
         ASSETS_DIR / "final_model_compare.png",
         color="#3f7cac",
     )
+
+    # === Parameter analysis charts ===
+    screen_raw = base[base["phase"] == "screen"]
+    param_analysis_chart(screen_raw, ASSETS_DIR / "param_analysis.png")
+    single_param_charts(screen_raw, ASSETS_DIR)
+    param_table_data(screen_raw)
 
 
 if __name__ == "__main__":

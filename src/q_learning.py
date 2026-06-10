@@ -335,22 +335,15 @@ def play(
 ):
     env = gymnasium.make("FlappyBird-v0", audio_on=audio_on, render_mode=render_mode, use_lidar=use_lidar)
     scores = []
-    # 同样，使用seed可以确保每次游戏的随机性都是一致的
     obs, _ = env.reset(seed=seed)
 
     for _ in range(episodes):
-        # print(obs)
         obs, _ = env.reset()
         while True:
 
             action = ai.choose_action(process_obs(obs, obs_mul_factor, state_mode), use_epsilon=False)
 
-            # Processing:
             obs, _, done , _, info = env.step(action)
-            """
-            这里将Obs的输出注释掉了，如有调试需要，可以自行开启
-            """
-            # print(f"Obs: {obs}\n" f"Score: {info['score']}\n")
 
             if done:
                 scores.append(info['score'])

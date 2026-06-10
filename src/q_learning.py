@@ -266,6 +266,7 @@ def train(
     max_steps_per_episode=None,
     state_mode="enhanced",
     reward_mode="death_penalty",
+    load_path=None,
 ):
     """
     通过让AI进行n次游戏来进行强化学习。
@@ -278,9 +279,11 @@ def train(
     """
     rng = random.Random(seed)
     player = GameAI(alpha=alpha, gamma=gamma, epsilon=epsilon, rng=rng)
+    if load_path:
+        player.load_q(load_path)
+        print(f"Resuming from {load_path} (q_size={len(player.q)})")
 
     env = gymnasium.make("FlappyBird-v0", render_mode=None, use_lidar=False)
-    # 使用seed可以确保每次训练时游戏的随机性都是一致的
     obs, _ = env.reset(seed=seed)
     # 进行多次游戏
     for i in range(iteration):

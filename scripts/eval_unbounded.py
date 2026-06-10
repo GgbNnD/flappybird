@@ -15,8 +15,8 @@ sys.path.insert(0, str(PROJECT_ROOT / "src"))
 from q_learning import GameAI, process_obs  # noqa: E402
 
 
-def evaluate_unbounded(ai, obs_mul_factor, state_mode, seeds):
-    env = gymnasium.make("FlappyBird-v0", render_mode=None, use_lidar=False)
+def evaluate_unbounded(ai, obs_mul_factor, state_mode, seeds, render_mode=None):
+    env = gymnasium.make("FlappyBird-v0", render_mode=render_mode, use_lidar=False)
     scores = []
     try:
         for seed in seeds:
@@ -50,16 +50,20 @@ def main():
     parser.add_argument("--episodes", type=int, default=50, help="评估局数（默认 50）")
     parser.add_argument("--seed-base", type=int, default=2026, help="种子基准（默认 2026）")
     parser.add_argument("--obs-mul-factor", type=int, default=30)
-    parser.add_argument("--state-mode", default="enhanced")
+    parser.add_argument("--state-mode", default="enhanced",
+                        choices=["example", "enhanced", "enhanced_top", "bonus", "lookahead"])
+    parser.add_argument("--render", action="store_true", help="可视化渲染（默认关闭）")
     parser.add_argument("--json-output", default=None, help="保存 JSON 路径")
     args = parser.parse_args()
 
     ai = GameAI()
     ai.load_q(args.model)
 
+    render_mode = "human" if args.render else None
     seeds = [args.seed_base + 1000 + i for i in range(args.episodes)]
-    print(f"评估 {args.model}，{args.episodes} 局，无步数限制 ...")
-    summary = evaluate_unbounded(ai, args.obs_mul_factor, args.state_mode, seeds)
+    print(f"评估 {args.model}，{args.episodes} 局，无步数限制 "
+          f"{'[render]' if args.render else ''}...")
+    summary = evaluate_unbounded(ai, args.obs_mul_factor, args.state_mode, seeds, render_mode)
 
     print(f"  mean={summary['mean_score']:.2f}  min={summary['min_score']}  "
           f"max={summary['max_score']}  std={summary['std_score']:.2f}  "

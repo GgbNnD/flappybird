@@ -264,8 +264,8 @@ def train(
     death_penalty=-1000,
     progress_interval=1000,
     max_steps_per_episode=None,
-    state_mode="enhanced",
-    reward_mode="death_penalty",
+    state_mode="enhanced_top",
+    reward_mode="shaped_v2",
     load_path=None,
 ):
     """
@@ -334,7 +334,7 @@ def play(
     episodes=5,
     obs_mul_factor=30,
     seed=42,
-    state_mode="enhanced",
+    state_mode="enhanced_top",
 ):
     env = gymnasium.make("FlappyBird-v0", audio_on=audio_on, render_mode=render_mode, use_lidar=use_lidar)
     scores = []

@@ -1,4 +1,4 @@
-This is XeTeX, Version 3.141592653-2.6-0.999993 (TeX Live 2022/dev/Debian) (preloaded format=xelatex 2026.4.25)  10 JUN 2026 18:08
+This is XeTeX, Version 3.141592653-2.6-0.999993 (TeX Live 2022/dev/Debian) (preloaded format=xelatex 2026.4.25)  17 JUN 2026 20:57
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -884,75 +884,81 @@ Package fontspec Info: Font family 'FandolFang-Regular(0)' created for font
 (fontspec)             <->"[FandolFang-Regular.otf]/OT:language=dflt;"
 (fontspec)             - 'small caps'  (m/sc) with NFSS spec.: 
 
-
-Overfull \hbox (94.452pt too wide) in paragraph at lines 128--144
- [][] 
- []
-
-[2] [3]
+File: ./figures//res.png Graphic file (type bmp)
+<./figures//res.png>
+[2]
 LaTeX Font Info:    External font `lmex10' loaded for size
-(Font)              <14.4> on input line 192.
+(Font)              <14.4> on input line 194.
 LaTeX Font Info:    External font `lmex10' loaded for size
-(Font)              <7> on input line 192.
+(Font)              <7> on input line 194.
 
 
 Package hyperref Warning: Token not allowed in a PDF string (Unicode):
-(hyperref)                removing `math shift' on input line 192.
+(hyperref)                removing `math shift' on input line 194.
 
 
 Package hyperref Warning: Token not allowed in a PDF string (Unicode):
-(hyperref)                removing `\varepsilon' on input line 192.
+(hyperref)                removing `\varepsilon' on input line 194.
 
 
 Package hyperref Warning: Token not allowed in a PDF string (Unicode):
-(hyperref)                removing `math shift' on input line 192.
+(hyperref)                removing `math shift' on input line 194.
 
-[4] [5] [6] [7] [8]
+[3] [4] [5] [6] [7]
 File: ../assets/charts//base_screen_top12.png Graphic file (type bmp)
 <../assets/charts//base_screen_top12.png>
- [9]
+ [8]
 File: ../assets/charts//base_retrain.png Graphic file (type bmp)
 <../assets/charts//base_retrain.png>
- [10]
+ [9]
 File: ../assets/charts//best_scores_line.png Graphic file (type bmp)
 <../assets/charts//best_scores_line.png>
- [11]
+ [10]
 File: ../assets/charts//param_analysis.png Graphic file (type bmp)
 <../assets/charts//param_analysis.png>
- [12] [13]
+ [11] [12]
 LaTeX Font Info:    Font shape `TU/lmtt/bx/n' in size <12> not available
-(Font)              Font shape `TU/lmtt/b/n' tried instead on input line 475.
- [14]
-Underfull \hbox (badness 1762) in paragraph at lines 570--570
+(Font)              Font shape `TU/lmtt/b/n' tried instead on input line 477.
+ [13]
+Underfull \hbox (badness 1762) in paragraph at lines 572--572
 []|\TU/FandolSong-Regular(0)/m/n/10.95 含 上 管 道 距 离 和 旋 转 角。| \TU/lmr/m/n/10.95 6 \TU/FandolSong-Regular(0)/m/n/10.95 维 导 致 \TU/lmr/m/n/10.95 Q \TU/FandolSong-Regular(0)/m/n/10.95 表 稀 疏
  []
 
-[15]
+[14]
 File: ../assets/charts//state_reward_key_compare.png Graphic file (type bmp)
 <../assets/charts//state_reward_key_compare.png>
- [16] [17] [18] [19] [20]
-Overfull \hbox (23.21953pt too wide) in paragraph at lines 723--724
+ [15] [16] [17] [18] [19]
+Overfull \hbox (23.21953pt too wide) in paragraph at lines 725--726
 \TU/FandolSong-Regular(0)/m/n/12 奖 励  |（\TU/lmr/m/n/12 bonus2\TU/FandolSong-Regular(0)/m/n/12 ） ，|  并 进 行 独 立 和 组 合 验 证。|  所 有 模 型 均 采 用 $\OML/lmm/m/it/12 ^^K \OT1/lmr/m/n/12 = 0\OML/lmm/m/it/12 :\OT1/lmr/m/n/12 7\OML/lmm/m/it/12 ; ^^M \OT1/lmr/m/n/12 = 0\OML/lmm/m/it/12 :\OT1/lmr/m/n/12 95\OML/lmm/m/it/12 ; " \OT1/lmr/m/n/12 = 0\OML/lmm/m/it/12 :\OT1/lmr/m/n/12 0\OML/lmm/m/it/12 ; obs[]mul[]factor \OT1/lmr/m/n/12 =
  []
 
 File: ../assets/charts//final_model_compare.png Graphic file (type bmp)
 <../assets/charts//final_model_compare.png>
-[21]
-Overfull \hbox (48.48798pt too wide) in paragraph at lines 771--772
-[]\TU/FandolSong-Regular(0)/b/n/12 最 终 提 交\TU/FandolSong-Regular(0)/m/n/12 ：|  基 础 最 佳 模 型 \TU/lmtt/m/n/12 q_best.pkl |\TU/FandolSong-Regular(0)/m/n/12 （\TU/lmr/m/n/12 enhanced + death_penalty\TU/FandolSong-Regular(0)/m/n/12 ） 、| \TU/lmr/m/n/12 bonus1 \TU/FandolSong-Regular(0)/m/n/12 模 型 \TU/lmtt/m/n/12 q_bonus1_best.pkl\TU/FandolSong-Regular(0)/m/n/12 、|
+[20]
+Overfull \hbox (6.94797pt too wide) in paragraph at lines 773--774
+\TU/lmtt/m/n/12 q_bonus1_best.pkl\TU/FandolSong-Regular(0)/m/n/12 、| \TU/lmr/m/n/12 bonus2 \TU/FandolSong-Regular(0)/m/n/12 模 型 \TU/lmtt/m/n/12 q_bonus_best.pkl\TU/FandolSong-Regular(0)/m/n/12 、|  组 合 最 佳 模 型 \TU/lmtt/m/n/12 q_combined_best.pkl\TU/FandolSong-Regular(0)/m/n/12 。| 
  []
 
-[22] [23] (./report.aux)
-Package rerunfilecheck Info: File `report.out' has not changed.
-(rerunfilecheck)             Checksum: 6384D661F1A62E3FD38B30815396B8DC;2731.
+[21] (./report.aux)
+
+LaTeX Warning: Label(s) may have changed. Rerun to get cross-references right.
+
+
+Package rerunfilecheck Warning: File `report.out' has changed.
+(rerunfilecheck)                Rerun to get outlines right
+(rerunfilecheck)                or use package `bookmark'.
+
+Package rerunfilecheck Info: Checksums for `report.out':
+(rerunfilecheck)             Before: 95AF184E39ADF524D99B0A9394BC0538;2655
+(rerunfilecheck)             After:  F7493263E5256EA924153C62113044A1;2539.
  ) 
 Here is how much of TeX's memory you used:
- 20107 strings out of 476191
- 420996 string characters out of 5812072
- 1076520 words of memory out of 5000000
- 40454 multiletter control sequences out of 15000+600000
- 524567 words of font info for 122 fonts, out of 8000000 for 9000
+ 20112 strings out of 476191
+ 421029 string characters out of 5812072
+ 1083520 words of memory out of 5000000
+ 40459 multiletter control sequences out of 15000+600000
+ 524559 words of font info for 121 fonts, out of 8000000 for 9000
  1348 hyphenation exceptions out of 8191
- 89i,20n,97p,449b,1897s stack positions out of 5000i,500n,10000p,200000b,80000s
+ 89i,20n,97p,473b,1895s stack positions out of 5000i,500n,10000p,200000b,80000s
 
-Output written on report.pdf (24 pages).
+Output written on report.pdf (22 pages).

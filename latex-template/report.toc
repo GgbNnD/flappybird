@@ -1,28 +1,26 @@
 \contentsline {section}{\numberline {1}引言}{2}{section.1}%
-\contentsline {section}{\numberline {2}项目内容与代码结构}{2}{section.2}%
-\contentsline {section}{\numberline {3}算法原理}{3}{section.3}%
-\contentsline {subsection}{\numberline {3.1}强化学习与马尔科夫决策过程}{3}{subsection.3.1}%
-\contentsline {subsection}{\numberline {3.2}Q-Learning 算法}{4}{subsection.3.2}%
-\contentsline {subsection}{\numberline {3.3}$\varepsilon $-greedy 探索策略}{4}{subsection.3.3}%
-\contentsline {section}{\numberline {4}算法实现}{5}{section.4}%
-\contentsline {subsection}{\numberline {4.1}数据存储与 Q 值查询}{5}{subsection.4.1}%
-\contentsline {subsection}{\numberline {4.2}Q 值更新}{6}{subsection.4.2}%
-\contentsline {subsection}{\numberline {4.3}动作选择}{7}{subsection.4.3}%
-\contentsline {subsection}{\numberline {4.4}训练循环}{8}{subsection.4.4}%
-\contentsline {section}{\numberline {5}实验}{9}{section.5}%
-\contentsline {subsection}{\numberline {5.1}基础参数实验}{9}{subsection.5.1}%
-\contentsline {subsubsection}{\numberline {5.1.1}实验设置}{9}{subsubsection.5.1.1}%
-\contentsline {subsubsection}{\numberline {5.1.2}初筛结果}{10}{subsubsection.5.1.2}%
-\contentsline {subsubsection}{\numberline {5.1.3}复训结果}{11}{subsubsection.5.1.3}%
-\contentsline {subsubsection}{\numberline {5.1.4}最佳模型 50 局分数分布}{12}{subsubsection.5.1.4}%
-\contentsline {subsubsection}{\numberline {5.1.5}参数影响分析}{12}{subsubsection.5.1.5}%
-\contentsline {paragraph}{学习率 $\alpha $}{13}{section*.2}%
-\contentsline {paragraph}{折扣因子 $\gamma $}{13}{section*.3}%
-\contentsline {paragraph}{探索率 $\varepsilon $}{14}{section*.4}%
-\contentsline {paragraph}{状态离散系数 \texttt {obs\_mul\_factor}}{14}{section*.5}%
-\contentsline {subsection}{\numberline {5.2}Bonus 状态与奖励实验}{14}{subsection.5.2}%
-\contentsline {subsubsection}{\numberline {5.2.1}状态表示改良（bonus1）与实验结果}{14}{subsubsection.5.2.1}%
-\contentsline {subsubsection}{\numberline {5.2.2}奖励塑形改良（bonus2）与实验结果}{17}{subsubsection.5.2.2}%
-\contentsline {subsubsection}{\numberline {5.2.3}组合模型最终对比}{21}{subsubsection.5.2.3}%
-\contentsline {section}{\numberline {6}结论}{22}{section.6}%
-\contentsline {section}{\numberline {7}运行方式}{23}{section.7}%
+\contentsline {section}{\numberline {2}算法原理}{2}{section.2}%
+\contentsline {subsection}{\numberline {2.1}强化学习与马尔科夫决策过程}{2}{subsection.2.1}%
+\contentsline {subsection}{\numberline {2.2}Q-Learning 算法}{3}{subsection.2.2}%
+\contentsline {subsection}{\numberline {2.3}$\varepsilon $-greedy 探索策略}{4}{subsection.2.3}%
+\contentsline {section}{\numberline {3}算法实现}{4}{section.3}%
+\contentsline {subsection}{\numberline {3.1}数据存储与 Q 值查询}{4}{subsection.3.1}%
+\contentsline {subsection}{\numberline {3.2}Q 值更新}{5}{subsection.3.2}%
+\contentsline {subsection}{\numberline {3.3}动作选择}{6}{subsection.3.3}%
+\contentsline {subsection}{\numberline {3.4}训练循环}{7}{subsection.3.4}%
+\contentsline {section}{\numberline {4}实验}{8}{section.4}%
+\contentsline {subsection}{\numberline {4.1}基础参数实验}{8}{subsection.4.1}%
+\contentsline {subsubsection}{\numberline {4.1.1}实验设置}{8}{subsubsection.4.1.1}%
+\contentsline {subsubsection}{\numberline {4.1.2}初筛结果}{9}{subsubsection.4.1.2}%
+\contentsline {subsubsection}{\numberline {4.1.3}复训结果}{10}{subsubsection.4.1.3}%
+\contentsline {subsubsection}{\numberline {4.1.4}最佳模型 50 局分数分布}{11}{subsubsection.4.1.4}%
+\contentsline {subsubsection}{\numberline {4.1.5}参数影响分析}{11}{subsubsection.4.1.5}%
+\contentsline {paragraph}{学习率 $\alpha $}{12}{section*.2}%
+\contentsline {paragraph}{折扣因子 $\gamma $}{12}{section*.3}%
+\contentsline {paragraph}{探索率 $\varepsilon $}{13}{section*.4}%
+\contentsline {paragraph}{状态离散系数 \texttt {obs\_mul\_factor}}{13}{section*.5}%
+\contentsline {subsection}{\numberline {4.2}Bonus 状态与奖励实验}{13}{subsection.4.2}%
+\contentsline {subsubsection}{\numberline {4.2.1}状态表示改良（bonus1）与实验结果}{13}{subsubsection.4.2.1}%
+\contentsline {subsubsection}{\numberline {4.2.2}奖励塑形改良（bonus2）与实验结果}{16}{subsubsection.4.2.2}%
+\contentsline {subsubsection}{\numberline {4.2.3}组合模型最终对比}{20}{subsubsection.4.2.3}%
+\contentsline {section}{\numberline {5}结论}{21}{section.5}%

@@ -108,77 +108,63 @@ python scripts/eval_unbounded.py q_best.pkl --render --episodes 3
 python scripts/eval_unbounded.py q_best.pkl --json-output results/result.json
 ```
 
-## 可视化
-
-```bash
-# 直接观看默认最佳模型
-python src/watch_best.py
-
-# 指定模型和局数
-python src/watch_best.py --model q_combined_best.pkl --state-mode enhanced_top --episodes 10
-```
-
 ## 已有模型
 
 | 文件 | state_mode | 说明 |
 |------|------|------|
-| `q_best.pkl` | enhanced | 基础参数搜索最佳模型 |
+| `q_base_best.pkl` | enhanced | 基础参数搜索最佳模型 |
 | `q_bonus1_best.pkl` | enhanced_top | bonus1 最佳（enhanced_top + death_penalty） |
 | `q_bonus_best.pkl` | enhanced | bonus2 最佳（enhanced + shaped_v2） |
 | `q_combined_best.pkl` | enhanced_top | 组合最佳（enhanced_top + shaped_v2） |
 
-`results/models/` 中保存了所有实验训练的中间模型。
+## 对最佳模型的观察
 
-## 复现实验
+无画面
+```
+python scripts/eval_unbounded.py q_best.pkl --state-mode enhanced_top --episodes 5
+```
+有画面
+```
+python scripts/eval_unbounded.py q_best.pkl --state-mode enhanced_top --render --episodes 5
+```
 
-基础参数搜索：
+## 使用 src/ 中的代码
+
+`src/` 提供了另一种更简洁的使用方式：
+
+### 训练
 
 ```bash
-python src/experiment.py --executor process --workers 6
+python src/train_ai_or_play.py --train
 ```
 
-bonus 状态和奖励实验：
+训练参数（`alpha`、`gamma`、`epsilon`、`iteration`）在 `src/train_ai_or_play.py` 中直接修改。模型自动保存为 `q_MMDD_HHMMSS.pkl`。
+
+### 评估 / 运行 AI
 
 ```bash
-python src/experiment.py \
-  --grid bonus \
-  --executor process \
-  --workers 6 \
-  --results-dir results_bonus \
-  --best-model-path q_bonus_best.pkl
+python src/train_ai_or_play.py --no-train
 ```
 
-生成报告图表：
+默认加载 `q_best.pkl`，如需更换模型，修改脚本第 32 行的 `path` 变量。
+
+### 人类试玩
 
 ```bash
-python scripts/generate_report_charts.py
+python src/human_play.py
 ```
 
-## 文件结构
+### 编程调用
 
-```text
-.
-├── README.md
-├── q_best.pkl              # 基础最佳模型
-├── q_bonus1_best.pkl       # bonus1 最佳模型
-├── q_bonus_best.pkl        # bonus2 最佳模型
-├── q_combined_best.pkl     # 组合最佳模型
-├── assets/                 # 报告图片
-├── results/                # 基础实验数据
-├── results_bonus/          # bonus 实验数据
-├── scripts/
-│   ├── train.py            # 训练脚本
-│   ├── eval_unbounded.py   # 评估脚本
-│   ├── generate_report_charts.py
-│   ├── train_bonus_final.py
-│   ├── train_bonus_models.py
-│   ├── train_bonus_all.py
-│   ├── train_shaped_v2.py
-│   └── update_results.py
-└── src/
-    ├── q_learning.py       # Q-learning 核心实现
-    ├── experiment.py       # 批量实验框架
-    ├── watch_best.py       # 可视化观看
-    ├── train_ai_or_play.py # 原始训练/游玩入口
-    └── human_play.py       # 人类试玩
+`src/q_learning.py` 中的 `train()` 和 `play()` 函数可直接在 Python 中调用，支持 `state_mode`、`reward_mode` 等完整参数。
+
+```python
+from src.q_learning import train, play
+
+ai = train(iteration=50000, alpha=0.7, gamma=0.95, epsilon=0,
+           state_mode="enhanced_top", reward_mode="shaped_v2")
+ai.save_q("my_model.pkl")
+
+play(ai, episodes=5, state_mode="enhanced_top")
 ```
+

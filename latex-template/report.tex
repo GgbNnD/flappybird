@@ -117,31 +117,33 @@ Flappy Bird 是一款经典的 2D 横版躲避游戏，玩家需要操控小鸟�
 	\item 设计奖励塑形方案（bonus2），在死亡惩罚基础上增加飞行姿态相关的密集反馈，并与原始奖励方案进行对比。
 \end{itemize}
 
-最终基础最佳模型保存在 \texttt{q\_best.pkl} 中，50 局无步数限制评估的平均得分为 $\mathbf{165.18}$，最高分为 $\mathbf{984}$。在 bonus 实验中：bonus1 改良状态（\texttt{enhanced\_top}）将均分提升至 $\mathbf{275.40}$；bonus2 改良奖励（\texttt{shaped\_v2}）将均分提升至 $\mathbf{311.16}$；两者结合的组合模型均分达到 $\mathbf{571.50}$，最高分 $\mathbf{2620}$，保存在 \texttt{q\_combined\_best.pkl} 中。所有数值均以无步数上限评估为准。
+最终基础最佳模型保存在 \texttt{q\_base\_best.pkl} 中，50 局无步数限制评估的平均得分为 $\mathbf{165.18}$，最高分为 $\mathbf{984}$。在 bonus 实验中：bonus1 改良状态（\texttt{enhanced\_top}）将均分提升至 $\mathbf{275.40}$；bonus2 改良奖励（\texttt{shaped\_v2}）将均分提升至 $\mathbf{311.16}$；两者结合的组合模型均分达到 $\mathbf{571.50}$，最高分 $\mathbf{2620}$，保存在 \texttt{q\_combined\_best.pkl}/\texttt{q\_best.pkl} 中。所有数值均以无步数上限评估为准。
+\begin{center}
+	\includegraphics[width=0.9\textwidth]{res.png}
+\end{center}
+% \section{项目内容与代码结构}
 
-\section{项目内容与代码结构}
+% 本项目使用 Python 和 \texttt{flappy-bird-gymnasium} 游戏环境，基于表格型 Q-Learning 进行训练，不涉及神经网络或 DQN。项目核心代码文件说明如下：
 
-本项目使用 Python 和 \texttt{flappy-bird-gymnasium} 游戏环境，基于表格型 Q-Learning 进行训练，不涉及神经网络或 DQN。项目核心代码文件说明如下：
-
-\begin{table}[H]
-	\centering
-	\begin{tabular}{ll}
-		\toprule
-		文件 & 功能说明 \\
-		\midrule
-		\texttt{src/q\_learning.py} & Q-Learning 智能体、状态处理、奖励塑形、训练/评估循环 \\
-		\texttt{src/experiment.py} & 参数网格搜索、多线程训练、结果记录与模型保存 \\
-		\texttt{src/watch\_best.py} & 加载最佳模型进行可视化或分数评估 \\
-		\texttt{q\_best.pkl} & 最终基础最佳 Q 表模型（enhanced + death\_penalty, 100k） \\
-		\texttt{q\_bonus1\_best.pkl} & bonus1 改良状态最佳模型（enhanced\_top + death\_penalty, 100k） \\
-		\texttt{q\_bonus\_best.pkl} & bonus2 改良奖励最佳模型（enhanced + shaped\_v2, 100k） \\
-		\texttt{q\_combined\_best.pkl} & 组合最佳模型（enhanced\_top + shaped\_v2, 100k） \\
-		\texttt{scripts/eval\_unbounded.py} & 无步数限制评估脚本 \\
-		\texttt{results/experiment\_results.csv} & 基础参数实验（18 组初筛 + 3 组复训）完整数据 \\
-		\texttt{results\_bonus/experiment\_results.csv} & bonus 状态/奖励实验（8 组初筛 + 3 组复训）完整数据 \\
-		\bottomrule
-	\end{tabular}
-\end{table}
+% \begin{table}[H]
+% 	\centering
+% 	\begin{tabular}{ll}
+% 		\toprule
+% 		文件 & 功能说明 \\
+% 		\midrule
+% 		\texttt{src/q\_learning.py} & Q-Learning 智能体、状态处理、奖励塑形、训练/评估循环 \\
+% 		\texttt{src/experiment.py} & 参数网格搜索、多线程训练、结果记录与模型保存 \\
+% 		\texttt{src/watch\_best.py} & 加载最佳模型进行可视化或分数评估 \\
+% 		\texttt{q\_best.pkl} & 最终基础最佳 Q 表模型（enhanced + death\_penalty, 100k） \\
+% 		\texttt{q\_bonus1\_best.pkl} & bonus1 改良状态最佳模型（enhanced\_top + death\_penalty, 100k） \\
+% 		\texttt{q\_bonus\_best.pkl} & bonus2 改良奖励最佳模型（enhanced + shaped\_v2, 100k） \\
+% 		\texttt{q\_combined\_best.pkl} & 组合最佳模型（enhanced\_top + shaped\_v2, 100k） \\
+% 		\texttt{scripts/eval\_unbounded.py} & 无步数限制评估脚本 \\
+% 		\texttt{results/experiment\_results.csv} & 基础参数实验（18 组初筛 + 3 组复训）完整数据 \\
+% 		\texttt{results\_bonus/experiment\_results.csv} & bonus 状态/奖励实验（8 组初筛 + 3 组复训）完整数据 \\
+% 		\bottomrule
+% 	\end{tabular}
+% \end{table}
 
 \section{算法原理}
 
@@ -753,7 +755,7 @@ def shape_reward(obs, reward, terminated, action,
 	\item \textbf{组合模型}（\texttt{enhanced\_top + shaped\_v2}）：两项改进叠加产生协同效应，均分达到 $\mathbf{571.50}$，最高分 $\mathbf{2620}$，分别为基础 best 的 $3.5\times$ 和 $2.7\times$。标准差 $615.99$ 说明性能波动较大——模型能跑出极高分会合，但仍在部分种子中过早死亡，与 Q 表对罕见状态的覆盖不足有关。
 \end{enumerate}
 
-结论：\texttt{enhanced\_top} 状态和 \texttt{shaped\_v2} 奖励各自独立优于基础方案，两者结合效果更佳。最终提交模型：\texttt{q\_best.pkl}（基础）、\texttt{q\_bonus1\_best.pkl}（bonus1）、\texttt{q\_bonus\_best.pkl}（bonus2）、\texttt{q\_combined\_best.pkl}（组合）。
+结论：\texttt{enhanced\_top} 状态和 \texttt{shaped\_v2} 奖励各自独立优于基础方案，两者结合效果更佳。
 
 \section{结论}
 
@@ -768,28 +770,7 @@ def shape_reward(obs, reward, terminated, action,
 
 	\item \textbf{组合模型}：将 \texttt{enhanced\_top} 状态与 \texttt{shaped\_v2} 奖励结合，100k 局训练后均分达到 $\mathbf{571.50}$，最高分 $\mathbf{2620}$，为基础 best 模型的 3.5 倍。模型保存为 \texttt{q\_combined\_best.pkl}。
 
-	\item \textbf{最终提交}：基础最佳模型 \texttt{q\_best.pkl}（enhanced + death\_penalty）、bonus1 模型 \texttt{q\_bonus1\_best.pkl}、bonus2 模型 \texttt{q\_bonus\_best.pkl}、组合最佳模型 \texttt{q\_combined\_best.pkl}。注意：旧版报告因评估阶段设置了 5000 步步数上限，导致分数被截顶。本报告已重新进行无步数限制评估，所有数据均为模型的真实表现。
+	\item \textbf{最终提交}：基础最佳模型 \texttt{q\_base\_best.pkl}（enhanced + death\_penalty）、bonus1 模型 \texttt{q\_bonus1\_best.pkl}、bonus2 模型 \texttt{q\_bonus\_best.pkl}、组合最佳模型 \texttt{q\_combined\_best.pkl}。
 \end{enumerate}
-
-\section{运行方式}
-
-查看基础最佳模型画面：
-\begin{verbatim}
-conda run -n alg python src/watch_best.py
-\end{verbatim}
-
-无渲染验证各模型分数：
-\begin{verbatim}
-# 基础最佳
-conda run -n alg python scripts/eval_unbounded.py q_best.pkl --episodes 50
-# bonus1 (enhanced_top)
-conda run -n alg python scripts/eval_unbounded.py q_bonus1_best.pkl \
-  --state-mode enhanced_top --episodes 50
-# bonus2 (shaped_v2)
-conda run -n alg python scripts/eval_unbounded.py q_bonus_best.pkl --episodes 50
-# 组合最佳
-conda run -n alg python scripts/eval_unbounded.py q_combined_best.pkl \
-  --state-mode enhanced_top --episodes 50
-\end{verbatim}
 
 \end{document}
